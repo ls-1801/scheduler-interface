@@ -1,0 +1,5 @@
+javaoperatorsdk:
+  controllers:
+    batchjobreconciler:
+      retry:
+        maxAttempts:3

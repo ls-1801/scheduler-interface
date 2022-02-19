@@ -1,0 +1,11 @@
+apiVersion: batchjob.gcr.io/v1alpha1
+kind: Slot
+metadata:
+  name: batchjob-sample
+  namespace: default
+spec:
+  slotsPerNode: 2
+  nodeLabel: "tuberlin.de/node-with-slots"
+  resourcesPerSlot:
+    cpu: "300m"
+    memory: "896Mi" # 512 * 1.75 (Overhead Factor)

@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.6.3</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>de.tu-berlin</groupId>
+    <artifactId>BatchJobOperator</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>BatchJobOperator</name>
+    <description>BatchJobOperator</description>
+    <properties>
+        <java.version>11</java.version>
+        <repackage.classifier/>
+        <spring-native.version>0.11.2</spring-native.version>
+        <fabric8-client.version>5.12.0</fabric8-client.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>kubernetes-client-bom</artifactId>
+            <version>${fabric8-client.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.experimental</groupId>-->
+        <!--            <artifactId>spring-native</artifactId>-->
+        <!--            <version>${spring-native.version}</version>-->
+        <!--        </dependency>-->
+
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.boot</groupId>-->
+        <!--            <artifactId>spring-boot-devtools</artifactId>-->
+        <!--            <scope>runtime</scope>-->
+        <!--            <optional>true</optional>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.boot</groupId>-->
+        <!--            <artifactId>spring-boot-configuration-processor</artifactId>-->
+        <!--            <optional>true</optional>-->
+        <!--        </dependency>-->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>1.6.4</version>
+        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>com.google.code.findbugs</groupId>-->
+        <!--            <artifactId>jsr305</artifactId>-->
+        <!--            <version>3.0.2</version>-->
+        <!--        </dependency>-->
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>crd-generator-apt</artifactId>
+            <scope>provided</scope>
+            <version>${fabric8-client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.javaoperatorsdk</groupId>
+            <artifactId>operator-framework</artifactId>
+            <version>2.0.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.javaoperatorsdk</groupId>
+            <artifactId>operator-framework-spring-boot-starter</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.java-json-tools</groupId>
+            <artifactId>json-patch</artifactId>
+            <version>1.13</version>
+        </dependency>
+
+        <!--        <dependency>-->
+        <!--            <groupId>io.fabric8</groupId>-->
+        <!--            <artifactId>fabric8-maven-plugin</artifactId>-->
+        <!--            <version>4.4.1</version>-->
+        <!--        </dependency>-->
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>fabric8-maven-plugin</artifactId>
+                <version>4.4.1</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>gcr.io/spark-on-kubernetes-316714/java-batchjob-operator</name>
+                            <registry>gcr.io/spark-on-kubernetes-316714</registry>
+                            <build></build>
+                        </image>
+                    </images>
+                </configuration>
+                <!-- Connect fabric8:resource, fabric8:build and fabric8:helm to lifecycle phases -->
+                <executions>
+                    <execution>
+                        <id>fabric8</id>
+                        <goals>
+                            <goal>resource</goal>
+                            <goal>build</goal>
+                            <goal>push</goal>
+                            <goal>helm</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                    <classifier>${repackage.classifier}</classifier>
+                    <image>
+                        <builder>paketobuildpacks/builder:tiny</builder>
+                        <env>
+                            <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
+                        </env>
+                    </image>
+                </configuration>
+            </plugin>
+            <!--            <plugin>-->
+            <!--                <groupId>org.springframework.experimental</groupId>-->
+            <!--                <artifactId>spring-aot-maven-plugin</artifactId>-->
+            <!--                <version>${spring-native.version}</version>-->
+            <!--                <executions>-->
+            <!--                    <execution>-->
+            <!--                        <id>test-generate</id>-->
+            <!--                        <goals>-->
+            <!--                            <goal>test-generate</goal>-->
+            <!--                        </goals>-->
+            <!--                    </execution>-->
+            <!--                    <execution>-->
+            <!--                        <id>generate</id>-->
+            <!--                        <goals>-->
+            <!--                            <goal>generate</goal>-->
+            <!--                        </goals>-->
+            <!--                    </execution>-->
+            <!--                </executions>-->
+            <!--            </plugin>-->
+        </plugins>
+    </build>
+    <repositories>
+        <repository>
+            <id>spring-releases</id>
+            <name>Spring Releases</name>
+            <url>https://repo.spring.io/release</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>spring-releases</id>
+            <name>Spring Releases</name>
+            <url>https://repo.spring.io/release</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <properties>
+                <repackage.classifier>exec</repackage.classifier>
+                <native-buildtools.version>0.9.9</native-buildtools.version>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.junit.platform</groupId>
+                    <artifactId>junit-platform-launcher</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>${native-buildtools.version}</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>test-native</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>build-native</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>
