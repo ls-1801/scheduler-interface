@@ -7,7 +7,6 @@ import io.fabric8.kubernetes.api.model.Quantity;
 
 import javax.annotation.Nonnull;
 import java.math.BigDecimal;
-import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,11 +79,11 @@ public class ClusterRequestResources {
         var nodeName = node.getMetadata().getName();
         var nodesRequestedResources = requestedResourceMap.get(nodeName);
         if (nodesRequestedResources == null) {
-            throw new RuntimeException(
-                    MessageFormat.format("Node {} is not part of the RequestedResourceMap", nodeName)
-            );
+            // If node is not part of the requested resource map, then there are no requested resources or that node
+            return BigDecimal.valueOf(0);
         }
 
         return nodesRequestedResources.getOrDefault(resourceName, BigDecimal.valueOf(0));
     }
 }
+

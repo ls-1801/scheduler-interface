@@ -7,7 +7,6 @@ import com.google.common.collect.Sets;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
-import lombok.Getter;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.annotation.Nonnull;
@@ -15,7 +14,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -38,6 +36,10 @@ public class PodsPerNode {
     static PodsPerNode groupByNode(List<Pod> pods) {
         if (pods.stream().anyMatch(pod -> pod.getSpec().getNodeName() == null)) {
             throw new SchedulingInProgressException("Pod is not scheduled yet, abort loop");
+        }
+
+        if (pods.stream().anyMatch(pod -> pod.getMetadata().getDeletionTimestamp() != null)) {
+            throw new SchedulingInProgressException("Pod is being deleted, abort loop");
         }
 
         var map = pods.stream()
@@ -65,6 +67,31 @@ public class PodsPerNode {
                                                           .collect(ImmutableSet.toImmutableSet());
 
                               return Sets.difference(thisPodSet, otherPodSet).stream()
+                                         .map(ComparePodByNameWrapper::getPod)
+                                         .sorted(Comparator.comparingInt(ApplicationPodView::getSlotId))
+                                         .collect(ImmutableList.toImmutableList());
+                          }));
+        return new PodsPerNode(diffMap.entrySet().stream()
+                                      .filter(e -> !e.getValue().isEmpty())
+                                      .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
+    public PodsPerNode union(@Nonnull PodsPerNode other) {
+
+        var diffMap = Sets.union(podsPerNodeMap.keySet(), other.podsPerNodeMap.keySet())
+                          .stream()
+                          .collect(ImmutableMap.toImmutableMap(Function.identity(), key -> {
+                              var thisPodSet =
+                                      this.podsPerNodeMap.getOrDefault(key, ImmutableList.of())
+                                                         .stream().map(ComparePodByNameWrapper::new)
+                                                         .collect(ImmutableSet.toImmutableSet());
+
+                              var otherPodSet =
+                                      other.podsPerNodeMap.getOrDefault(key, ImmutableList.of())
+                                                          .stream().map(ComparePodByNameWrapper::new)
+                                                          .collect(ImmutableSet.toImmutableSet());
+
+                              return Sets.union(thisPodSet, otherPodSet).stream()
                                          .map(ComparePodByNameWrapper::getPod)
                                          .sorted(Comparator.comparingInt(ApplicationPodView::getSlotId))
                                          .collect(ImmutableList.toImmutableList());
@@ -125,27 +152,4 @@ public class PodsPerNode {
         return Boolean.parseBoolean(isGhostPod);
     }
 
-    @Getter
-    private static class ComparePodByNameWrapper {
-        transient private final ApplicationPodView pod;
-
-
-        public ComparePodByNameWrapper(ApplicationPodView pod) {
-            this.pod = pod;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            ComparePodByNameWrapper that = (ComparePodByNameWrapper) o;
-            return Objects.equals(pod.getSlotId(), that.pod.getSlotId()) && pod.getRequestMap()
-                                                                               .equals(that.pod.getRequestMap());
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(pod.getRequestMap(), pod.getSlotId());
-        }
-    }
 }

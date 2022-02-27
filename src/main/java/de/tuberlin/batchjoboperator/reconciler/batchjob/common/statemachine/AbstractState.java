@@ -4,9 +4,9 @@ package de.tuberlin.batchjoboperator.reconciler.batchjob.common.statemachine;
 import de.tuberlin.batchjoboperator.crd.batchjob.BatchJob;
 import de.tuberlin.batchjoboperator.crd.batchjob.BatchJobState;
 import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
-@Log4j2
+@Slf4j
 public abstract class AbstractState {
 
     public UpdateControl<BatchJob> onNoApplication(Context context, Action action) {
@@ -46,8 +46,6 @@ public abstract class AbstractState {
         UpdateControl<BatchJob> noChange();
 
         UpdateControl<BatchJob> deleteApplication();
-
-        void removeTaintFromNode();
     }
 
     public interface Context {

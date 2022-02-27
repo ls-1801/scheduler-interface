@@ -1,24 +1,37 @@
 package de.tuberlin.batchjoboperator.crd.slots;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.annotation.Nullable;
+
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 public class SlotOccupationStatus {
+
+    @Nullable
+    private String reservedFor;
 
     private SlotState state;
     private String podName;
     private String nodeName;
-    private String id;
+    private int nodeId;
+    private int slotPositionOnNode;
+    @Nullable
+    private String podUId;
+    private int position;
 
-    public String getId() {
-        return id;
+    public SlotOccupationStatus(SlotState state, String podName, String nodeName, int nodeId, int slotPositionOnNode,
+                                @Nullable String podUId) {
+        this.state = state;
+        this.podName = podName;
+        this.nodeName = nodeName;
+        this.nodeId = nodeId;
+        this.slotPositionOnNode = slotPositionOnNode;
+        this.podUId = podUId;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public int getSlotPositionOnNode() {
+        return slotPositionOnNode;
     }
 }

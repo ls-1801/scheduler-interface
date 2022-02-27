@@ -2,15 +2,17 @@ package de.tuberlin.batchjoboperator.crd.slots;
 
 
 import io.fabric8.kubernetes.api.model.Quantity;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 
 import java.util.Map;
 
-@Getter
-@Setter
+@Value
+@Builder(toBuilder = true)
+@Jacksonized
 public class SlotSpec {
-    private int slotsPerNode;
-    private String nodeLabel;
-    private Map<String, Quantity> resourcesPerSlot;
+   int slotsPerNode;
+   String nodeLabel;
+   Map<String, Quantity> resourcesPerSlot;
 }

@@ -1,5 +1,4 @@
-javaoperatorsdk:
-  controllers:
-    batchjobreconciler:
-      retry:
-        maxAttempts:3
+logging:
+  level:
+    de.tuberlin.batchjoboperator: warn
+    de.tuberlin.batchjoboperator.web: debug

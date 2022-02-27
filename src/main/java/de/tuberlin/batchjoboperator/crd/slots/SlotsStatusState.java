@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum SlotsStatusState {
     IN_PROGRESS("IN_PROGRESS"),
     SUCCESS("SUCCESS"),
-    ERROR("ERROR");
+    ERROR("ERROR"),
+    RUNNING("RUNNING"),
+    INITIAL("INITIAL");
 
     private final String statusString;
 

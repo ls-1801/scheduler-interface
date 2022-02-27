@@ -5,13 +5,13 @@ import de.tuberlin.batchjoboperator.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.reconciler.batchjob.common.statemachine.AbstractState;
 import de.tuberlin.batchjoboperator.reconciler.batchjob.common.statemachine.ManagedApplicationEvent;
 import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
 
-@Log4j2
+@Slf4j
 public class NoApplicationManager extends AbstractApplicationManager {
 
     @Override
@@ -39,14 +39,6 @@ public class NoApplicationManager extends AbstractApplicationManager {
             @Override
             public UpdateControl<BatchJob> deleteApplication() {
                 throw new RuntimeException("Cannot delete Application when NO_SPARK event");
-            }
-
-            @Override
-            public void removeTaintFromNode() {
-                if (resource.getStatus().getTaint() != null) {
-                    var taint = resource.getStatus().getTaint();
-
-                }
             }
         };
 

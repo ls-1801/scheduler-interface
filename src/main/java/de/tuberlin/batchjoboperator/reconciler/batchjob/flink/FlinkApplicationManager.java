@@ -1,6 +1,7 @@
-package de.tuberlin.batchjoboperator.reconciler.batchjob.spark;
+package de.tuberlin.batchjoboperator.reconciler.batchjob.flink;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.primitives.Longs;
 import de.tuberlin.batchjoboperator.crd.batchjob.BatchJob;
 import de.tuberlin.batchjoboperator.crd.batchjob.BatchJobState;
@@ -12,10 +13,8 @@ import io.fabric8.kubernetes.client.CustomResource;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.zjsonpatch.JsonDiff;
 import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
-import io.k8s.sparkoperator.SparkApplication;
-import io.k8s.sparkoperator.SparkApplicationStatusState;
-import io.k8s.sparkoperator.V1beta2SparkApplicationStatus;
-import io.k8s.sparkoperator.V1beta2SparkApplicationStatusApplicationState;
+import io.k8s.flinkoperator.FlinkCluster;
+import io.k8s.flinkoperator.V1beta1FlinkClusterStatus;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -38,15 +37,16 @@ import static java.util.Optional.ofNullable;
 @Slf4j
 @ThreadSafe
 @AllArgsConstructor
-public class SparkApplicationManager extends AbstractApplicationManager {
-    private static final ObjectMapper mapper = new ObjectMapper();
+public class FlinkApplicationManager extends AbstractApplicationManager {
+    private static final ObjectMapper mapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
 
     private final KubernetesClient kubernetesClient;
-    private final SparkApplicationManagerService service;
+    private final FlinkApplicationManagerService service;
 
-    private final SparkApplication mostRecentState;
+    private final FlinkCluster mostRecentState;
     @Nullable
-    private final SparkApplication previousState;
+    private final FlinkCluster previousState;
 
     @Override
     protected Pair<AbstractState.Action, ManagedApplicationEvent> getAction(@Nonnull BatchJob resource) {
@@ -93,13 +93,12 @@ public class SparkApplicationManager extends AbstractApplicationManager {
 
             @Override
             public UpdateControl<BatchJob> deleteApplication() {
-                log.info("Delete SparkApplication");
-                kubernetesClient.resources(SparkApplication.class).delete(mostRecentState);
+                log.info("Delete FlinkCluster");
+                kubernetesClient.resources(FlinkCluster.class).delete(mostRecentState);
                 service.removeManager(mostRecentState);
                 wasDeleted = true;
                 return UpdateControl.updateStatus(resource);
             }
-
         };
 
 
@@ -114,13 +113,11 @@ public class SparkApplicationManager extends AbstractApplicationManager {
 
 
         var event = ofNullable(mostRecentState).map(CustomResource::getStatus)
-                                               .map(V1beta2SparkApplicationStatus::getApplicationState)
-                                               .map(V1beta2SparkApplicationStatusApplicationState::getState)
+                                               .map(V1beta1FlinkClusterStatus::getState)
                                                .map(this::toEventEnum).orElse(NO_APPLICATION);
 
         var previousEvent = ofNullable(previousState).map(CustomResource::getStatus)
-                                                     .map(V1beta2SparkApplicationStatus::getApplicationState)
-                                                     .map(V1beta2SparkApplicationStatusApplicationState::getState)
+                                                     .map(V1beta1FlinkClusterStatus::getState)
                                                      .map(this::toEventEnum).orElse(NO_APPLICATION);
 
         if (event == previousEvent) {
@@ -147,17 +144,18 @@ public class SparkApplicationManager extends AbstractApplicationManager {
 
     }
 
-    private ManagedApplicationEvent toEventEnum(SparkApplicationStatusState state) {
+    private ManagedApplicationEvent toEventEnum(String state) {
         switch (state) {
-            case NewState:
-            case SubmittedState:
+            case "Creating":
                 return SCHEDULED;
-            case SucceedingState:
-            case RunningState:
+            case "Running":
+            case "Stopping":
+            case "PartiallyStopped":
                 return RUNNING;
-            case CompletedState:
+            case "Stopped":
                 return COMPLETED;
         }
+        log.info("Current State: {}", state);
         return ERROR;
     }
 
@@ -172,7 +170,8 @@ public class SparkApplicationManager extends AbstractApplicationManager {
         boolean didChange = mostRecentStateVersion > latestObservedStateVersion;
 
         if (didChange) {
-            log.info("SparkApplication Resource Version changed from {} to {}", latestObservedStateVersion, mostRecentStateVersion);
+            log.info("FlinkCluster Resource Version changed from {} to {}", latestObservedStateVersion,
+                    mostRecentStateVersion);
         }
 
         return didChange;

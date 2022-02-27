@@ -1,6 +1,7 @@
 package de.tuberlin.batchjoboperator.config;
 
 import de.tuberlin.batchjoboperator.reconciler.batchjob.BatchJobReconciler;
+import de.tuberlin.batchjoboperator.reconciler.batchjob.flink.FlinkApplicationManagerService;
 import de.tuberlin.batchjoboperator.reconciler.batchjob.spark.SparkApplicationManagerService;
 import de.tuberlin.batchjoboperator.reconciler.slots.SlotReconciler;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -18,8 +19,9 @@ public class Config {
 
     @Bean
     public BatchJobReconciler batchJobReconciler(KubernetesClient client,
-                                                 SparkApplicationManagerService sparkApplicationManagerService) {
-        return new BatchJobReconciler(client, sparkApplicationManagerService);
+                                                 SparkApplicationManagerService sparkApplicationManagerService,
+                                                 FlinkApplicationManagerService flinkApplicationManagerService) {
+        return new BatchJobReconciler(client, sparkApplicationManagerService, flinkApplicationManagerService);
     }
 
     @Bean

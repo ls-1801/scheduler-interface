@@ -2,10 +2,11 @@ package de.tuberlin.batchjoboperator.reconciler.slots;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.primitives.Ints;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import lombok.experimental.Delegate;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -16,7 +17,7 @@ import java.util.Optional;
 
 import static de.tuberlin.batchjoboperator.reconciler.slots.SlotReconciler.SLOT_POD_SLOT_ID_NAME;
 
-@Log4j2
+@Slf4j
 public class ApplicationPodView extends Pod {
 
     @Delegate
@@ -35,7 +36,9 @@ public class ApplicationPodView extends Pod {
     }
 
     public Optional<String> getLabel(String labelName) {
-        return Optional.ofNullable(pod.getMetadata().getLabels().get(labelName));
+        return Optional.ofNullable(pod.getMetadata())
+                       .map(ObjectMeta::getLabels)
+                       .map(map -> map.get(labelName));
     }
 
     @Nullable

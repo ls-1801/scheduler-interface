@@ -4,7 +4,7 @@ metadata:
   name: batchjob-sample3
 spec:
   requeue: true
-  spec:
+  sparkSpec:
     type: Scala
     mode: cluster
     image: "gcr.io/spark-operator/spark:v3.1.1"

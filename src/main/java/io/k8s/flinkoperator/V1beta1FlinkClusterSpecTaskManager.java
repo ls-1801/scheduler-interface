@@ -14,6 +14,7 @@
 package io.k8s.flinkoperator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodSecurityContext;
@@ -56,6 +57,9 @@ public class V1beta1FlinkClusterSpecTaskManager {
 
     @JsonProperty("nodeSelector")
     private Map<String, String> nodeSelector = null;
+
+    @JsonProperty("affinity")
+    private Affinity affinity = null;
 
     @JsonProperty("podAnnotations")
     private Map<String, String> podAnnotations = null;
@@ -251,6 +255,28 @@ public class V1beta1FlinkClusterSpecTaskManager {
 
     public void setMemoryProcessRatio(Integer memoryProcessRatio) {
         this.memoryProcessRatio = memoryProcessRatio;
+    }
+
+    public V1beta1FlinkClusterSpecTaskManager affinity(Affinity affinity) {
+        this.affinity = affinity;
+        return this;
+    }
+
+    /**
+     * Get affinity
+     *
+     * @return affinity
+     **/
+    @javax.annotation.Nullable
+    @ApiModelProperty(value = "")
+
+    public Affinity getAffinity() {
+        return affinity;
+    }
+
+
+    public void setAffinity(Affinity affinity) {
+        this.affinity = affinity;
     }
 
 

@@ -11,6 +11,11 @@ package io.k8s.sparkoperator;/*
  */
 
 
+import io.fabric8.kubernetes.api.model.Affinity;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.PodSecurityContext;
+import io.fabric8.kubernetes.api.model.Toleration;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.swagger.annotations.ApiModelProperty;
 
 import java.util.ArrayList;
@@ -26,7 +31,7 @@ import java.util.Objects;
         ":37.998Z[Etc/UTC]")
 public class V1beta2SparkApplicationSpecDriver {
 
-    private V1beta2SparkApplicationSpecDriverAffinity affinity;
+    private Affinity affinity;
 
 
     private Map<String, String> annotations = null;
@@ -98,16 +103,13 @@ public class V1beta2SparkApplicationSpecDriver {
     private String podName;
 
 
-    private V1beta2SparkApplicationSpecDriverPodSecurityContext podSecurityContext;
-
-
     private String schedulerName;
 
 
     private List<V1beta2SparkApplicationSpecDriverSecrets> secrets = null;
 
 
-    private V1beta2SparkApplicationSpecDriverSecurityContext securityContext;
+    private PodSecurityContext securityContext;
 
 
     private String serviceAccount;
@@ -119,19 +121,19 @@ public class V1beta2SparkApplicationSpecDriver {
     private Boolean shareProcessNamespace;
 
 
-    private List<V1beta2SparkApplicationSpecDriverInitContainers> sidecars = null;
+    private List<Container> sidecars = null;
 
 
     private Long terminationGracePeriodSeconds;
 
 
-    private List<V1beta2SparkApplicationSpecDriverTolerations> tolerations = null;
+    private List<Toleration> tolerations = null;
 
 
-    private List<V1beta2SparkApplicationSpecDriverVolumeMounts> volumeMounts = null;
+    private List<VolumeMount> volumeMounts = null;
 
 
-    public V1beta2SparkApplicationSpecDriver affinity(V1beta2SparkApplicationSpecDriverAffinity affinity) {
+    public V1beta2SparkApplicationSpecDriver affinity(Affinity affinity) {
 
         this.affinity = affinity;
         return this;
@@ -145,12 +147,12 @@ public class V1beta2SparkApplicationSpecDriver {
     @javax.annotation.Nullable
     @ApiModelProperty(value = "")
 
-    public V1beta2SparkApplicationSpecDriverAffinity getAffinity() {
+    public Affinity getAffinity() {
         return affinity;
     }
 
 
-    public void setAffinity(V1beta2SparkApplicationSpecDriverAffinity affinity) {
+    public void setAffinity(Affinity affinity) {
         this.affinity = affinity;
     }
 
@@ -794,30 +796,6 @@ public class V1beta2SparkApplicationSpecDriver {
     }
 
 
-    public V1beta2SparkApplicationSpecDriver podSecurityContext(V1beta2SparkApplicationSpecDriverPodSecurityContext podSecurityContext) {
-
-        this.podSecurityContext = podSecurityContext;
-        return this;
-    }
-
-    /**
-     * Get podSecurityContext
-     *
-     * @return podSecurityContext
-     **/
-    @javax.annotation.Nullable
-    @ApiModelProperty(value = "")
-
-    public V1beta2SparkApplicationSpecDriverPodSecurityContext getPodSecurityContext() {
-        return podSecurityContext;
-    }
-
-
-    public void setPodSecurityContext(V1beta2SparkApplicationSpecDriverPodSecurityContext podSecurityContext) {
-        this.podSecurityContext = podSecurityContext;
-    }
-
-
     public V1beta2SparkApplicationSpecDriver schedulerName(String schedulerName) {
 
         this.schedulerName = schedulerName;
@@ -874,7 +852,7 @@ public class V1beta2SparkApplicationSpecDriver {
     }
 
 
-    public V1beta2SparkApplicationSpecDriver securityContext(V1beta2SparkApplicationSpecDriverSecurityContext securityContext) {
+    public V1beta2SparkApplicationSpecDriver securityContext(PodSecurityContext securityContext) {
 
         this.securityContext = securityContext;
         return this;
@@ -888,12 +866,12 @@ public class V1beta2SparkApplicationSpecDriver {
     @javax.annotation.Nullable
     @ApiModelProperty(value = "")
 
-    public V1beta2SparkApplicationSpecDriverSecurityContext getSecurityContext() {
+    public PodSecurityContext getSecurityContext() {
         return securityContext;
     }
 
 
-    public void setSecurityContext(V1beta2SparkApplicationSpecDriverSecurityContext securityContext) {
+    public void setSecurityContext(PodSecurityContext securityContext) {
         this.securityContext = securityContext;
     }
 
@@ -978,15 +956,15 @@ public class V1beta2SparkApplicationSpecDriver {
     }
 
 
-    public V1beta2SparkApplicationSpecDriver sidecars(List<V1beta2SparkApplicationSpecDriverInitContainers> sidecars) {
+    public V1beta2SparkApplicationSpecDriver sidecars(List<Container> sidecars) {
 
         this.sidecars = sidecars;
         return this;
     }
 
-    public V1beta2SparkApplicationSpecDriver addSidecarsItem(V1beta2SparkApplicationSpecDriverInitContainers sidecarsItem) {
+    public V1beta2SparkApplicationSpecDriver addSidecarsItem(Container sidecarsItem) {
         if (this.sidecars == null) {
-            this.sidecars = new ArrayList<>();
+            this.sidecars = new ArrayList<Container>();
         }
         this.sidecars.add(sidecarsItem);
         return this;
@@ -1000,12 +978,12 @@ public class V1beta2SparkApplicationSpecDriver {
     @javax.annotation.Nullable
     @ApiModelProperty(value = "")
 
-    public List<V1beta2SparkApplicationSpecDriverInitContainers> getSidecars() {
+    public List<Container> getSidecars() {
         return sidecars;
     }
 
 
-    public void setSidecars(List<V1beta2SparkApplicationSpecDriverInitContainers> sidecars) {
+    public void setSidecars(List<Container> sidecars) {
         this.sidecars = sidecars;
     }
 
@@ -1034,15 +1012,15 @@ public class V1beta2SparkApplicationSpecDriver {
     }
 
 
-    public V1beta2SparkApplicationSpecDriver tolerations(List<V1beta2SparkApplicationSpecDriverTolerations> tolerations) {
+    public V1beta2SparkApplicationSpecDriver tolerations(List<Toleration> tolerations) {
 
         this.tolerations = tolerations;
         return this;
     }
 
-    public V1beta2SparkApplicationSpecDriver addTolerationsItem(V1beta2SparkApplicationSpecDriverTolerations tolerationsItem) {
+    public V1beta2SparkApplicationSpecDriver addTolerationsItem(Toleration tolerationsItem) {
         if (this.tolerations == null) {
-            this.tolerations = new ArrayList<>();
+            this.tolerations = new ArrayList<Toleration>();
         }
         this.tolerations.add(tolerationsItem);
         return this;
@@ -1056,25 +1034,25 @@ public class V1beta2SparkApplicationSpecDriver {
     @javax.annotation.Nullable
     @ApiModelProperty(value = "")
 
-    public List<V1beta2SparkApplicationSpecDriverTolerations> getTolerations() {
+    public List<Toleration> getTolerations() {
         return tolerations;
     }
 
 
-    public void setTolerations(List<V1beta2SparkApplicationSpecDriverTolerations> tolerations) {
+    public void setTolerations(List<Toleration> tolerations) {
         this.tolerations = tolerations;
     }
 
 
-    public V1beta2SparkApplicationSpecDriver volumeMounts(List<V1beta2SparkApplicationSpecDriverVolumeMounts> volumeMounts) {
+    public V1beta2SparkApplicationSpecDriver volumeMounts(List<VolumeMount> volumeMounts) {
 
         this.volumeMounts = volumeMounts;
         return this;
     }
 
-    public V1beta2SparkApplicationSpecDriver addVolumeMountsItem(V1beta2SparkApplicationSpecDriverVolumeMounts volumeMountsItem) {
+    public V1beta2SparkApplicationSpecDriver addVolumeMountsItem(VolumeMount volumeMountsItem) {
         if (this.volumeMounts == null) {
-            this.volumeMounts = new ArrayList<>();
+            this.volumeMounts = new ArrayList<VolumeMount>();
         }
         this.volumeMounts.add(volumeMountsItem);
         return this;
@@ -1088,12 +1066,12 @@ public class V1beta2SparkApplicationSpecDriver {
     @javax.annotation.Nullable
     @ApiModelProperty(value = "")
 
-    public List<V1beta2SparkApplicationSpecDriverVolumeMounts> getVolumeMounts() {
+    public List<VolumeMount> getVolumeMounts() {
         return volumeMounts;
     }
 
 
-    public void setVolumeMounts(List<V1beta2SparkApplicationSpecDriverVolumeMounts> volumeMounts) {
+    public void setVolumeMounts(List<VolumeMount> volumeMounts) {
         this.volumeMounts = volumeMounts;
     }
 
@@ -1131,7 +1109,6 @@ public class V1beta2SparkApplicationSpecDriver {
                 Objects.equals(this.memoryOverhead, v1beta2SparkApplicationSpecDriver.memoryOverhead) &&
                 Objects.equals(this.nodeSelector, v1beta2SparkApplicationSpecDriver.nodeSelector) &&
                 Objects.equals(this.podName, v1beta2SparkApplicationSpecDriver.podName) &&
-                Objects.equals(this.podSecurityContext, v1beta2SparkApplicationSpecDriver.podSecurityContext) &&
                 Objects.equals(this.schedulerName, v1beta2SparkApplicationSpecDriver.schedulerName) &&
                 Objects.equals(this.secrets, v1beta2SparkApplicationSpecDriver.secrets) &&
                 Objects.equals(this.securityContext, v1beta2SparkApplicationSpecDriver.securityContext) &&
@@ -1150,7 +1127,7 @@ public class V1beta2SparkApplicationSpecDriver {
         return Objects.hash(affinity, annotations, configMaps, coreLimit, coreRequest, cores, dnsConfig, env, envFrom
                 , envSecretKeyRefs, envVars, gpu, hostAliases, hostNetwork, image, initContainers, javaOptions,
                 kubernetesMaster, labels, lifecycle, memory, memoryOverhead, nodeSelector, podName,
-                podSecurityContext, schedulerName, secrets, securityContext, serviceAccount, serviceAnnotations,
+                schedulerName, secrets, securityContext, serviceAccount, serviceAnnotations,
                 shareProcessNamespace, sidecars, terminationGracePeriodSeconds, tolerations, volumeMounts);
     }
 
@@ -1183,7 +1160,6 @@ public class V1beta2SparkApplicationSpecDriver {
         sb.append("    memoryOverhead: ").append(toIndentedString(memoryOverhead)).append("\n");
         sb.append("    nodeSelector: ").append(toIndentedString(nodeSelector)).append("\n");
         sb.append("    podName: ").append(toIndentedString(podName)).append("\n");
-        sb.append("    podSecurityContext: ").append(toIndentedString(podSecurityContext)).append("\n");
         sb.append("    schedulerName: ").append(toIndentedString(schedulerName)).append("\n");
         sb.append("    secrets: ").append(toIndentedString(secrets)).append("\n");
         sb.append("    securityContext: ").append(toIndentedString(securityContext)).append("\n");

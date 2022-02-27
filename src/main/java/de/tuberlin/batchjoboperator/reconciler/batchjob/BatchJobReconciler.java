@@ -3,6 +3,7 @@ package de.tuberlin.batchjoboperator.reconciler.batchjob;
 import de.tuberlin.batchjoboperator.crd.batchjob.BatchJob;
 import de.tuberlin.batchjoboperator.reconciler.batchjob.common.ApplicationManager;
 import de.tuberlin.batchjoboperator.reconciler.batchjob.common.NoApplicationManager;
+import de.tuberlin.batchjoboperator.reconciler.batchjob.flink.FlinkApplicationManagerService;
 import de.tuberlin.batchjoboperator.reconciler.batchjob.spark.SparkApplicationManagerService;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
@@ -22,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
 import java.util.List;
 
 import static de.tuberlin.batchjoboperator.config.Constants.MANAGED_BY_LABEL_NAME;
@@ -40,6 +40,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
     private final KubernetesClient kubernetesClient;
 
     private final SparkApplicationManagerService sparkApplicationManagerService;
+    private final FlinkApplicationManagerService flinkApplicationManagerService;
 
     @Override
     public List<EventSource> prepareEventSources(EventSourceContext<BatchJob> context) {
@@ -51,14 +52,12 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
         SharedIndexInformer<FlinkCluster> flinkApplicationSharedIndexInformer =
                 kubernetesClient.resources(FlinkCluster.class)
                                 .inAnyNamespace()
-                                //.withLabel(MANAGED_BY_LABEL_NAME, MANAGED_BY_LABEL_VALUE)
+                                .withLabel(MANAGED_BY_LABEL_NAME, MANAGED_BY_LABEL_VALUE)
                                 .runnableInformer(0);
 
-        return List.of(new InformerEventSource<>(sparkApplicationSharedIndexInformer, Mappers.fromOwnerReference())
-                , new InformerEventSource<>(flinkApplicationSharedIndexInformer, (cluster) -> {
-                    log.info("Flink Cluster found: {}", cluster);
-                    return Collections.emptySet();
-                }));
+        return List.of(
+                new InformerEventSource<>(sparkApplicationSharedIndexInformer, Mappers.fromOwnerReference()),
+                new InformerEventSource<>(flinkApplicationSharedIndexInformer, Mappers.fromOwnerReference()));
     }
 
     @Override
@@ -72,7 +71,8 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
     public UpdateControl<BatchJob> reconcile(BatchJob resource, Context context) {
         log.info("Reconciling: {}", resource.getMetadata().getName());
 
-        var manager = context.getSecondaryResource(SparkApplication.class).map(this::getSparkApplicationManager)
+        var manager = context.getSecondaryResource(SparkApplication.class)
+                             .map(this::getSparkApplicationManager)
                              .or(() -> context.getSecondaryResource(FlinkCluster.class)
                                               .map(this::getFlinkApplicationManager))
                              .orElseGet(this::handleNoApplication);
@@ -88,7 +88,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
         return sparkApplicationManagerService.getManager(sparkApp);
     }
 
-    private ApplicationManager getFlinkApplicationManager(FlinkCluster sparkApp) {
-        throw new RuntimeException("Not Implemented");
+    private ApplicationManager getFlinkApplicationManager(FlinkCluster flinkCluster) {
+        return flinkApplicationManagerService.getManager(flinkCluster);
     }
 }

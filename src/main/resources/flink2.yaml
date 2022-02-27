@@ -1,7 +1,7 @@
 apiVersion: batchjob.gcr.io/v1alpha1
 kind: BatchJob
 metadata:
-  name: batchjob-flink
+  name: batchjob-flink2
 spec:
   requeue: true
   flinkSpec:

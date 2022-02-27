@@ -3,6 +3,7 @@ package de.tuberlin.batchjoboperator.web.extender;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import de.tuberlin.batchjoboperator.reconciler.slots.ApplicationPodView;
 import io.fabric8.kubernetes.api.model.Pod;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 
@@ -10,6 +11,7 @@ import java.util.Map;
 
 @Value
 @RequiredArgsConstructor
+@Builder
 public class ExtenderPreemptionArgs {
     // Pod being scheduled
     @JsonProperty("Pod")
@@ -26,4 +28,5 @@ public class ExtenderPreemptionArgs {
         return "ExtenderPreemptionArgs(pod=" + ApplicationPodView.wrap(pod) + ", " +
                 "nodeNameToVictims=" + this.getNodeNameToVictims() + ", nodeNameToMetaVictims=" + this.getNodeNameToMetaVictims() + ")";
     }
+
 }

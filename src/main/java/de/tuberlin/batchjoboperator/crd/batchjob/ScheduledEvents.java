@@ -6,22 +6,20 @@ import java.time.LocalDateTime;
 
 @Data
 public class ScheduledEvents {
-    private LocalDateTime start;
-    private LocalDateTime stop;
+    private String start;
+    private String stop;
     private Boolean successful;
-    private String scheduledNode;
 
 
-    public static ScheduledEvents startEvent(String scheduledNode) {
+    public static ScheduledEvents startEvent() {
         ScheduledEvents scheduledEvents = new ScheduledEvents();
-        scheduledEvents.setStart(LocalDateTime.now());
-        scheduledEvents.setScheduledNode(scheduledNode);
+        scheduledEvents.setStart(LocalDateTime.now().toString());
         return scheduledEvents;
     }
 
 
     public ScheduledEvents stopEvent(boolean successful) {
-        this.setStop(LocalDateTime.now());
+        this.setStop(LocalDateTime.now().toString());
         this.setSuccessful(successful);
         return this;
     }

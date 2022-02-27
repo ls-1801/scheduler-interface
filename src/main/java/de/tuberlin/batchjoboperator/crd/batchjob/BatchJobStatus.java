@@ -1,5 +1,6 @@
 package de.tuberlin.batchjoboperator.crd.batchjob;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import de.tuberlin.batchjoboperator.crd.slots.SlotOccupationStatus;
 import io.fabric8.kubernetes.api.model.Taint;
@@ -9,6 +10,7 @@ import lombok.EqualsAndHashCode;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
@@ -31,5 +33,19 @@ public class BatchJobStatus extends ObservedGenerationAwareStatus {
     @JsonProperty
     public Long getObservedGeneration() {
         return super.getObservedGeneration();
+    }
+
+    @JsonIgnore
+    public void stopLatestSchedulingEvent(boolean succesful) {
+        scheduledEvents
+                .stream()
+                .filter(event -> event.getStart() != null && event.getStop() == null && event.getSuccessful() == null)
+                .sorted(Comparator.comparing(ScheduledEvents::getStart).reversed())
+                .findFirst()
+                .ifPresent(event -> event.stopEvent(succesful));
+    }
+
+    public void startSchedulingEvent() {
+        scheduledEvents.add(ScheduledEvents.startEvent());
     }
 }

@@ -43,7 +43,6 @@ public class SlotProblems {
         if (!anyProblems()) {
             slot.getStatus().setProblems(null);
             slot.getStatus().setNodeProblems(null);
-            slot.getStatus().setState(SlotsStatusState.SUCCESS);
             return UpdateControl.updateStatus(slot);
         }
 
