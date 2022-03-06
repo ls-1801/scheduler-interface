@@ -1,8 +1,7 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingJobConditionDeserializer;
-import de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingReconciler;
+import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingJobConditionDeserializer;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.utils.Serialization;

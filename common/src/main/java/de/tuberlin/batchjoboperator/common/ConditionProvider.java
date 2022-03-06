@@ -1,6 +1,8 @@
 package de.tuberlin.batchjoboperator.common;
 
 
+import java.util.Set;
+
 public interface ConditionProvider<T extends StateMachineContext> {
-    Condition<T> getCondition(String conditionName);
+    Set<Condition<T>> getCondition(String conditionName);
 }

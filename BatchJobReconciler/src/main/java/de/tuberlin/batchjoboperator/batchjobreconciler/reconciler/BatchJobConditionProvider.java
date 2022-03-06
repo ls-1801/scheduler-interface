@@ -5,7 +5,9 @@ import de.tuberlin.batchjoboperator.common.Condition;
 import de.tuberlin.batchjoboperator.common.ConditionProvider;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -31,11 +33,11 @@ class BatchJobConditionProvider implements ConditionProvider<BatchJobContext> {
 
 
     @Override
-    public Condition<BatchJobContext> getCondition(String conditionName) {
-        return conditionMap.computeIfAbsent(conditionName, (name) -> {
+    public Set<Condition<BatchJobContext>> getCondition(String conditionName) {
+        return Collections.singleton(conditionMap.computeIfAbsent(conditionName, (name) -> {
             var condition = BatchJobCondition.constructors.get(conditionName).get();
             condition.initialize(context);
             return condition;
-        });
+        }));
     }
 }

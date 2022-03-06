@@ -3,7 +3,7 @@ package de.tuberlin.batchjoboperator.common;
 import lombok.Data;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.assertj.core.groups.Tuple;
-import org.assertj.core.util.Lists;
+import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -105,7 +105,7 @@ class StateMachineTest {
         assertThat(uut.runMachineUntilItStops(null, provider, context))
                 .hasSize(1)
                 .extracting("newState", "newConditions")
-                .containsExactly(Tuple.tuple(STATE_1, Lists.list(provider.parsedCondition.get(AWAIT_SLOTS_CONDITION))));
+                .containsExactly(Tuple.tuple(STATE_1, Sets.set(provider.parsedCondition.get(AWAIT_SLOTS_CONDITION))));
 
         assertThat(provider.parsedCondition.get(AWAIT_SLOTS_CONDITION))
                 .extracting("slotName")
@@ -304,11 +304,11 @@ class StateMachineTest {
         }
 
         @Override
-        public Condition<TestContext> getCondition(String conditionName) {
-            return parsedCondition.computeIfAbsent(
+        public Set<Condition<TestContext>> getCondition(String conditionName) {
+            return Collections.singleton(parsedCondition.computeIfAbsent(
                     conditionName,
                     (name) -> ConditionFactory.create(name, context)
-            );
+            ));
         }
     }
 

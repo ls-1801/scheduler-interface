@@ -35,10 +35,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.BatchJobStateMachine.STATE_MACHINE;
-import static de.tuberlin.batchjoboperator.common.Action.getCondition;
+import static de.tuberlin.batchjoboperator.common.Action.getConditions;
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_VALUE;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
+import static org.springframework.util.CollectionUtils.firstElement;
 
 /**
  * A very simple sample controller that creates a service with a label.
@@ -53,7 +54,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
 
     public static void releaseRequest(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
         log.info("release requested");
-        var releaseCondition = getCondition(conditions, AwaitReleaseCondition.class).get();
+        var releaseCondition = firstElement(getConditions(conditions, AwaitReleaseCondition.class));
         context.removeApplication(releaseCondition.getName());
     }
 
@@ -68,7 +69,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
     }
 
     public static void creationRequest(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
-        var creationRequestCondition = getCondition(conditions, AwaitCreationRequest.class).get();
+        var creationRequestCondition = firstElement(getConditions(conditions, AwaitCreationRequest.class));
         log.info("Creation Request: {}", creationRequestCondition.getCreationRequest());
         context.createApplication(Objects.requireNonNull(creationRequestCondition.getCreationRequest()));
     }

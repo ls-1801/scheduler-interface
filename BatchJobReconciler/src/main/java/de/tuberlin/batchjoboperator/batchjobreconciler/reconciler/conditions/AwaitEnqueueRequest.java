@@ -2,7 +2,7 @@ package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions;
 
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.BatchJobContext;
 import de.tuberlin.batchjoboperator.common.NamespacedName;
-import de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingStatusState;
+import de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingState;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,7 +46,7 @@ public class AwaitEnqueueRequest extends BatchJobCondition {
 
         var scheduling = context.getScheduling(schedulingNameOpt.get());
 
-        if (scheduling == null || scheduling.getStatus().getState() == SchedulingStatusState.ERROR) {
+        if (scheduling == null || scheduling.getStatus().getState() == SchedulingState.Error) {
             return error("Scheduling is set but does not exist or is in a bad state");
         }
 

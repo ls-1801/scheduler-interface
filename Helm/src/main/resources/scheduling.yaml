@@ -19,7 +19,13 @@ spec:
       namespace: default
     - name: batchjob-flink2
       namespace: default
-    - name: batchjob-flink2
-      namespace: default
-    - name: batchjob-flink2
-      namespace: default
+#    - name: batchjob-flink2
+#      namespace: default
+#    - name: batchjob-flink2
+#      namespace: default
+#    - name: batchjob-flink3
+#      namespace: default
+#    - name: batchjob-flink3
+#      namespace: default
+
+

@@ -125,7 +125,7 @@ public class StateMachine<T extends StateMachineContext> {
         var trace = traceState(statename, true);
         return trace.stream().flatMap(tState -> tState.getConditions().stream()
                                                       .flatMap(c -> c.getConditionIdentifiers().stream()))
-                    .map(conditionProvider::getCondition)
+                    .flatMap(conditionName -> conditionProvider.getCondition(conditionName).stream())
                     .collect(Collectors.toSet());
     }
 
@@ -166,7 +166,7 @@ public class StateMachine<T extends StateMachineContext> {
     public List<UpdateResult<T>> runMachineUntilItStops(@Nullable String initialState,
                                                         @Nonnull ConditionProvider<T> provider,
                                                         @Nonnull T context) {
-        int sanityCheck = 100;
+        int sanityCheck = 5;
         var state = initialState;
         var lastUpdate = Optional.<UpdateResult<T>>empty();
         var updates = new ArrayList<UpdateResult<T>>();
@@ -181,6 +181,9 @@ public class StateMachine<T extends StateMachineContext> {
             sanityCheck--;
         }
 
+
+        log.error("First 10 States: {}", updates.stream().map(UpdateResult::getNewState).limit(10)
+                                                .collect(Collectors.toSet()));
         Assertions.fail("The Machine does not appear to stop");
         return Collections.emptyList();
     }

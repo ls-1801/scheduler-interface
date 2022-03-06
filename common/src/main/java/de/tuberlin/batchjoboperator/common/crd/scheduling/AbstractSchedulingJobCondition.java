@@ -9,9 +9,10 @@ import java.util.Set;
 @Data
 public class AbstractSchedulingJobCondition {
     protected String condition;
-    protected NamespacedName name;
     protected Boolean value = false;
 
+    @Nullable
+    protected NamespacedName jobName;
     @Nullable
     protected Set<Integer> slotIds;
     @Nullable
@@ -23,4 +24,8 @@ public class AbstractSchedulingJobCondition {
     protected NamespacedName slotsName;
     @Nullable
     protected String error;
+
+    @Nullable
+    private Set<JobConditionValue> jobs;
 }
+

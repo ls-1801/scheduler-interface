@@ -28,11 +28,13 @@ public class OnCondition<T extends StateMachineContext> {
     }
 
     public void update(ConditionProvider<T> provider, T context) {
-        conditionIdentifiers.forEach(c -> provider.getCondition(c).update(context));
+        conditionIdentifiers.stream().flatMap(c -> provider.getCondition(c).stream()).forEach(c -> c.update(context));
     }
 
     public ErrorsOrResult shouldDoAction(ConditionProvider<T> provider) {
-        var results = conditionIdentifiers.stream().map(c -> provider.getCondition(c)).collect(Collectors.toList());
+        var results =
+                conditionIdentifiers.stream().flatMap(c -> provider.getCondition(c).stream())
+                                    .collect(Collectors.toList());
         var errors = results.stream()
                             .map(Condition::getError)
                             .filter(Objects::nonNull)
@@ -57,7 +59,8 @@ public class OnCondition<T extends StateMachineContext> {
 
     public void callAction(ConditionProvider<T> provider, T context) {
         var conditions =
-                conditionIdentifiers.stream().map(c -> provider.getCondition(c))
+                conditionIdentifiers.stream().flatMap(c -> provider.getCondition(c).stream())
+                                    .filter(Condition::getValue)
                                     .collect(Collectors.toSet());
         this.action.doTheThing(conditions, context);
     }

@@ -3,14 +3,16 @@ package de.tuberlin.batchjoboperator.common;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import lombok.Data;
 
+import java.util.Objects;
+
 @Data
 public class NamespacedName {
     private String namespace;
     private String name;
 
     public NamespacedName(String name, String namespace) {
-        this.namespace = namespace;
-        this.name = name;
+        this.namespace = Objects.requireNonNull(namespace);
+        this.name = Objects.requireNonNull(name);
     }
 
     public NamespacedName() {

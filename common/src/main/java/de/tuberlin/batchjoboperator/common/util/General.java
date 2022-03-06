@@ -1,6 +1,7 @@
 package de.tuberlin.batchjoboperator.common.util;
 
 import com.google.common.collect.Streams;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.annotation.Nonnull;
@@ -13,6 +14,7 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+@Slf4j
 public class General {
 
     @Nonnull
@@ -27,6 +29,7 @@ public class General {
         try {
             return Optional.ofNullable(supplier.get());
         } catch (NullPointerException npex) {
+            log.error("getNullSafe caught a NullPointerException");
             return Optional.empty();
         }
     }

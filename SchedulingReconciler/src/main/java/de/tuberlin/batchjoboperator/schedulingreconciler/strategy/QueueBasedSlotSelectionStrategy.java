@@ -1,4 +1,4 @@
-package de.tuberlin.batchjoboperator.schedulingreconciler.reconciler;
+package de.tuberlin.batchjoboperator.schedulingreconciler.strategy;
 
 import de.tuberlin.batchjoboperator.common.NamespacedName;
 import lombok.Value;

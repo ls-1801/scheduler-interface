@@ -9,8 +9,10 @@ import java.util.Set;
 
 @Data
 public class SchedulingStatus {
-    private SchedulingStatusState state = SchedulingStatusState.INITIAL;
+    private SchedulingState state = SchedulingState.AcquireState;
     private Set<AbstractSchedulingJobCondition> conditions = new HashSet<>();
+    private Set<SchedulingJobState> jobStates = new HashSet<>();
+
     @Nullable
     private List<String> problems;
 }

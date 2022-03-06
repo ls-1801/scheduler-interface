@@ -1,4 +1,4 @@
-package de.tuberlin.batchjoboperator.schedulingreconciler.reconciler;
+package de.tuberlin.batchjoboperator.schedulingreconciler.statemachine;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import de.tuberlin.batchjoboperator.common.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.AbstractSchedulingJobCondition;
+import de.tuberlin.batchjoboperator.common.crd.scheduling.JobConditionValue;
 import org.springframework.lang.Nullable;
 
 import java.io.IOException;
@@ -14,14 +15,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import static de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingJobCondition.AWAITING_JOB_COMPLETION;
-import static de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingJobCondition.AWAITING_JOB_ENQUEUE;
-import static de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingJobCondition.AWAITING_JOB_START;
-import static de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingJobCondition.AWAITING_JOB_SUBMISSION;
-import static de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingJobCondition.AWAITING_NUMBER_OF_SLOTS_AVAILABLE;
-import static de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingJobCondition.AWAITING_PRECEDING_JOB_SUBMISSION;
-import static de.tuberlin.batchjoboperator.schedulingreconciler.reconciler.SchedulingJobCondition.AWAITING_SLOTS_AVAILABLE;
 
 public class SchedulingJobConditionDeserializer extends StdDeserializer<AbstractSchedulingJobCondition> {
 
@@ -52,14 +45,14 @@ public class SchedulingJobConditionDeserializer extends StdDeserializer<Abstract
         }
 
         setFieldIfExist(node, "condition", JsonNode::asText, obj::setCondition);
-        setFieldIfExist(node, "name", this::namespacedName, obj::setName);
         setFieldIfExist(node, "error", JsonNode::asText, obj::setError);
         setFieldIfExist(node, "lastUpdateTimestamp", JsonNode::asText, obj::setLastUpdateTimestamp);
         setFieldIfExist(node, "value", JsonNode::asBoolean, obj::setValue);
         setFieldIfExist(node, "slotsIds", this::slotIds, obj::setSlotIds);
         setFieldIfExist(node, "numberOfSlotsRequired", JsonNode::asInt, obj::setNumberOfSlotsRequired);
         setFieldIfExist(node, "slotsName", this::namespacedName, obj::setSlotsName);
-
+        setFieldIfExist(node, "jobName", this::namespacedName, obj::setJobName);
+        setFieldIfExist(node, "jobs", this::jobs, obj::setJobs);
 
         return obj;
     }
@@ -78,6 +71,20 @@ public class SchedulingJobConditionDeserializer extends StdDeserializer<Abstract
         return new NamespacedName(name, namespace);
     }
 
+    private Set<JobConditionValue> jobs(JsonNode node) {
+        if (!node.isArray())
+            throw new RuntimeException("Not an array");
+        var set = new HashSet<JobConditionValue>();
+        for (JsonNode jobConditionNode : node) {
+            var key = jobConditionNode.get("name");
+            var value = jobConditionNode.get("value");
+
+            set.add(new JobConditionValue(namespacedName(key), value.asBoolean()));
+        }
+
+        return set;
+    }
+
     private Set<Integer> slotIds(JsonNode node) {
         var set = new HashSet<Integer>();
         for (JsonNode jsonNode : node) {
@@ -88,38 +95,9 @@ public class SchedulingJobConditionDeserializer extends StdDeserializer<Abstract
 
     @Nullable
     private AbstractSchedulingJobCondition constructClassBasedOnCondition(@Nullable String condition) {
-        if (condition == null)
+        if (condition == null || !SchedulingCondition.constructorMap.containsKey(condition))
             return null;
 
-        switch (condition) {
-            case AWAITING_JOB_SUBMISSION:
-                return new AwaitingJobSubmissionCondition();
-
-
-            case AWAITING_NUMBER_OF_SLOTS_AVAILABLE:
-                return new AwaitNumberOfSlotsAvailableCondition();
-
-
-            case AWAITING_SLOTS_AVAILABLE:
-                return new AwaitSlotsAvailableCondition();
-
-
-            case AWAITING_JOB_COMPLETION:
-                return new AwaitingJobCompletionCondition();
-
-
-            case AWAITING_JOB_ENQUEUE:
-                return new AwaitingJobEnqueueCondition();
-
-
-            case AWAITING_PRECEDING_JOB_SUBMISSION:
-                return new AwaitPreviousJobSubmittedCondition();
-
-            case AWAITING_JOB_START:
-                return new AwaitingJobStartCondition();
-
-        }
-
-        return null;
+        return SchedulingCondition.constructorMap.get(condition).get();
     }
 }

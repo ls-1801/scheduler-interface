@@ -29,6 +29,26 @@ spec:
     className: org.apache.flink.streaming.examples.wordcount.WordCount
     args: [ "--input", "./README.txt" ]
 
+---
+apiVersion: batchjob.gcr.io/v1alpha1
+kind: BatchJob
+metadata:
+  name: batchjob-flink3
+#  labels:
+#   batchjob.tuberlin.de/active-scheduling-name: scheduling
+#   batchjob.tuberlin.de/active-scheduling-namespace: default
+#   batchjob.tuberlin.de/application-creation-request-replication: "2"
+#   batchjob.tuberlin.de/application-creation-request-slot-ids: "2_3"
+#   batchjob.tuberlin.de/application-creation-request-slots-name: batchjob-slots
+#   batchjob.tuberlin.de/application-creation-request-slots-namespace: default
+spec:
+  #  requeue: true
+  flinkSpec:
+    jarFile: ./examples/streaming/WordCount.jar
+    className: org.apache.flink.streaming.examples.wordcount.WordCount
+    args: [ "--input", "./README.txt" ]
+
+
 #---
 #apiVersion: batchjob.gcr.io/v1alpha1
 #kind: Scheduling

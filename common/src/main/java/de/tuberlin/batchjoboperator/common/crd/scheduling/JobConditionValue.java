@@ -1,5 +1,6 @@
 package de.tuberlin.batchjoboperator.common.crd.scheduling;
 
+import de.tuberlin.batchjoboperator.common.NamespacedName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,9 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SchedulingStatusCondition {
-    private String jobName;
-    private String namespace;
-    private SchedulingCondition state;
-    private Long replication;
+public class JobConditionValue {
+    private NamespacedName name;
+    private Boolean value;
 }

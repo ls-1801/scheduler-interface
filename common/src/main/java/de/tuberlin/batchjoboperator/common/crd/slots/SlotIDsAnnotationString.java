@@ -25,6 +25,13 @@ public class SlotIDsAnnotationString {
     }
 
     @Nonnull
+    public static SlotIDsAnnotationString ofIds(@Nonnull Collection<Integer> slotIds) {
+        var set = new TreeSet<>(slotIds);
+        return new SlotIDsAnnotationString(set);
+    }
+
+
+    @Nonnull
     public static SlotIDsAnnotationString parse(@Nonnull String annotationValue) {
         var set = Splitter.on("_")
                           .trimResults()
