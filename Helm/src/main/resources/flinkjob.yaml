@@ -1,0 +1,42 @@
+---
+apiVersion: "flinkoperator.k8s.io/v1beta1"
+kind: "FlinkCluster"
+metadata:
+  name: "batchjob-flink"
+spec:
+  flinkVersion: "1.8.2"
+  image:
+    name: "flink:1.8.2"
+  jobManager:
+    ports:
+      ui: 8081
+    resources:
+      limits:
+        memory: "1024Mi"
+        cpu: "200m"
+  taskManager:
+    replicas: 1
+    resources:
+      requests:
+        cpu: "300m"
+        memory: "896Mi"
+      limits:
+        cpu: "300m"
+        memory: "896Mi"
+    nodeSelector:
+      tuberlin.de/node-with-slots: "0"
+    podLabels:
+      batchjob.tuberlin.de/slots-id: "0"
+      batchjob.tuberlin.de/slots-is-ghost-pod: "false"
+      batchjob.tuberlin.de/slots-resource-name: "batchjob-sample"
+      batchjob.tuberlin.de/slots-target-node: "gke-opcluster-default-pool-244fc649-p6tb"
+  job:
+    jarFile: "./examples/streaming/WordCount.jar"
+    className: "org.apache.flink.streaming.examples.wordcount.WordCount"
+    args:
+      - "--input"
+      - "./README.txt"
+    parallelism: 1
+    restartPolicy: Never
+  flinkProperties:
+    taskmanager.numberOfTaskSlots: "1"

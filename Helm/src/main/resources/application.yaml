@@ -1,0 +1,7 @@
+logging:
+  level:
+    de.tuberlin.batchjoboperator: warn
+    de.tuberlin.batchjoboperator.web: debug
+    de.tuberlin.batchjoboperator.reconciler.scheduling: debug
+    de.tuberlin.batchjoboperator.reconciler.batchjob: debug
+    io.fabric8.kubernetes.*: error

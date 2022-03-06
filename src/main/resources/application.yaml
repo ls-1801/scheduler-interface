@@ -1,4 +1,0 @@
-logging:
-  level:
-    de.tuberlin.batchjoboperator: warn
-    de.tuberlin.batchjoboperator.web: debug
