@@ -20,8 +20,6 @@ public class AwaitCompletionCondition extends BatchJobCondition {
 
     @Override
     protected boolean updateInternal(BatchJobContext context) {
-        return getNullSafe(() -> {
-            return context.getApplication().isCompleted();
-        }).orElse(false);
+        return getNullSafe(context.getApplication()::isCompleted).orElse(false);
     }
 }

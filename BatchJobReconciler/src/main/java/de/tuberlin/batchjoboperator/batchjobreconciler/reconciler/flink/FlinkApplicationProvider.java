@@ -1,6 +1,6 @@
 package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.flink;
 
-import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.ApplicationProvider;
+import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.ApplicationSpecific;
 import de.tuberlin.batchjoboperator.common.NamespacedName;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 @RequiredArgsConstructor
-public class FlinkApplicationProvider implements ApplicationProvider {
+public class FlinkApplicationProvider implements ApplicationSpecific {
     private final KubernetesClient client;
     private final NamespacedName name;
     private final Set<String> runningStates =
@@ -27,7 +27,12 @@ public class FlinkApplicationProvider implements ApplicationProvider {
     private FlinkCluster cache = null;
     private List<Pod> pods = null;
 
-    private FlinkCluster getApplication() {
+    @Override
+    public FlinkCluster getApplication() {
+        return getApplicationInternal();
+    }
+
+    private FlinkCluster getApplicationInternal() {
         if (cache == null) {
             cache = client.resources(FlinkCluster.class)
                           .inNamespace(name.getNamespace())

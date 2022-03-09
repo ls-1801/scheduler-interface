@@ -25,6 +25,8 @@ public abstract class BatchJobCondition extends AbstractBatchJobCondition implem
     public static final String AWAIT_COMPLETION_CONDITION = "AWAIT_COMPLETION_CONDITION";
     public static final String AWAIT_DELETION_CONDITION = "AWAIT_DELETION";
     public static final String AWAIT_POD_SCHEDULED_CONDITION = "AWAIT_POD_SCHEDULED_CONDITION";
+    public static final String DEBUG_CONDITION = "DEBUG_CONDITION";
+
     public static final Map<String, Supplier<BatchJobCondition>> constructors = Map.of(
             AWAIT_ENQUEUE_REQUEST_CONDITION, AwaitEnqueueRequest::new,
             AWAIT_CREATION_REQUEST_CONDITION, AwaitCreationRequest::new,
@@ -32,7 +34,8 @@ public abstract class BatchJobCondition extends AbstractBatchJobCondition implem
             AWAIT_COMPLETION_CONDITION, AwaitCompletionCondition::new,
             AWAIT_POD_SCHEDULED_CONDITION, AwaitPodScheduledCondition::new,
             AWAIT_RUNNING_CONDITION, AwaitRunningCondition::new,
-            AWAIT_DELETION_CONDITION, AwaitingDeletionCondition::new
+            AWAIT_DELETION_CONDITION, AwaitingDeletionCondition::new,
+            DEBUG_CONDITION, DebugCondition::new
     );
     @JsonIgnore
     protected BatchJob job;
@@ -69,7 +72,7 @@ public abstract class BatchJobCondition extends AbstractBatchJobCondition implem
         return false;
     }
 
-    protected abstract boolean updateInternal(BatchJobContext client);
+    protected abstract boolean updateInternal(BatchJobContext context);
 
 
     @Override

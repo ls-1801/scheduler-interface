@@ -53,7 +53,7 @@ public class SparkApplicationBuilder extends ApplicationBuilder {
                 .labels(createLabels())
                 .affinity(createAffinity())
                 .memory(quantityToSparkMemory(slots.getSpec().getResourcesPerSlot().get("memory")))
-                .schedulerName("my-scheduler")
+                .schedulerName("external-scheduler")
                 .instances(freeSlots.size())
                 .cores(1);
 

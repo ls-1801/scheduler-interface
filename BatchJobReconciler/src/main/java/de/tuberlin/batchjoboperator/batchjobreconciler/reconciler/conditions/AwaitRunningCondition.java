@@ -17,10 +17,10 @@ public class AwaitRunningCondition extends BatchJobCondition {
 
 
     @Override
-    protected boolean updateInternal(BatchJobContext client) {
-        return getNullSafe(() -> client.getApplication().isExisting() && (client.getApplication()
-                                                                                .isCompleted() || client.getApplication()
-                                                                                                        .isRunning()))
+    protected boolean updateInternal(BatchJobContext context) {
+        return getNullSafe(() -> context.getApplication().isExisting() && (context.getApplication()
+                                                                                  .isCompleted() || context.getApplication()
+                                                                                                           .isRunning()))
                 .orElse(false);
     }
 }

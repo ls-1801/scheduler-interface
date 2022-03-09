@@ -23,7 +23,6 @@ import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_
 
 public abstract class ApplicationBuilder {
 
-    // protected final VerifiedReleaseFromQueueRequest request;
     protected final BatchJob job;
     protected final Slot slots;
     protected final List<SlotOccupationStatus> freeSlots;

@@ -15,7 +15,7 @@ public class AwaitingDeletionCondition extends BatchJobCondition {
 
 
     @Override
-    protected boolean updateInternal(BatchJobContext client) {
-        return !client.getApplication().isExisting();
+    protected boolean updateInternal(BatchJobContext context) {
+        return !context.getApplication().isExisting();
     }
 }

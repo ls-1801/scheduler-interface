@@ -29,7 +29,7 @@ public class BatchJobContext implements StateMachineContext {
     private final KubernetesClient client;
 
     @Getter
-    private final ApplicationProvider application;
+    private final ApplicationSpecific application;
     private final Map<NamespacedName, Scheduling> schedulingCache = new HashMap<>();
     private final Map<NamespacedName, Slot> slotsCache = new HashMap<>();
 
@@ -41,7 +41,7 @@ public class BatchJobContext implements StateMachineContext {
             this.application = new FlinkApplicationProvider(client, NamespacedName.of(resource));
         }
         else if (resource.isSpark()) {
-            this.application = new SparkApplicationProvider(client);
+            this.application = new SparkApplicationProvider(client, NamespacedName.of(resource));
         }
         else {
             throw new RuntimeException("Neither Spark nor Flink");

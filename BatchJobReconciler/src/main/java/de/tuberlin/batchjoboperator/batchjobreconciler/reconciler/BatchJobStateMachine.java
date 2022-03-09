@@ -13,7 +13,9 @@ import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditi
 import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.BatchJobCondition.AWAIT_POD_SCHEDULED_CONDITION;
 import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.BatchJobCondition.AWAIT_RELEASE_CONDITION;
 import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.BatchJobCondition.AWAIT_RUNNING_CONDITION;
+import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.BatchJobCondition.DEBUG_CONDITION;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.CompletedState;
+import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.FailedState;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.InQueueState;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.ReadyState;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.RunningState;
@@ -123,6 +125,13 @@ public class BatchJobStateMachine {
                               // error which will be picked up by the State machine and cause transition to the closest
                               // parent ErrorState or the defaultErrorState defined by the StateMachine
                               .errorState(State.<BatchJobContext>withName(BatchJobState.FailedState.name()).build())
+                              .condition(OnCondition.all(
+                                      // None Of these will be called, since debug is always false
+                                      (cs, c) -> {
+                                      },
+                                      FailedState.name(),
+                                      DEBUG_CONDITION
+                              ))
                               .condition(OnCondition.any(
                                       BatchJobReconciler.stopRunningEvent(false),
                                       ReadyState.name(),

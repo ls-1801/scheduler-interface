@@ -1,10 +1,11 @@
 package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler;
 
+import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.Pod;
 
 import java.util.List;
 
-public interface ApplicationProvider {
+public interface ApplicationSpecific {
     boolean isCompleted();
 
     boolean isRunning();
@@ -14,4 +15,6 @@ public interface ApplicationProvider {
     boolean isExisting();
 
     void delete();
+
+    <T extends HasMetadata> T getApplication();
 }
