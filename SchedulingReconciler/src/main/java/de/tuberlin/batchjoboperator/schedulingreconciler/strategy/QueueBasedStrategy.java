@@ -6,9 +6,9 @@ import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.AwaitNumberOfSlotsAvailableCondition;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingContext;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +16,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingCondition.AWAIT_NUMBER_OF_SLOTS_CONDITION;
+import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Predicate.not;
 
@@ -59,16 +61,26 @@ public class QueueBasedStrategy implements SchedulingStrategy {
     }
 
     @Override
-    public Set<Condition<SchedulingContext>> awaitSlotsConditions() {
-        var first = this.enqueuedJobs().stream().findFirst();
+    public Set<Condition<SchedulingContext>> awaitSlotsConditions(String conditionName) {
+        if (!AWAIT_NUMBER_OF_SLOTS_CONDITION.equals(conditionName)) {
+            return emptySet();
+        }
 
+
+        var stream = this.enqueuedJobs().stream().distinct();
         var replications = getReplication();
 
-        return first.map(j -> new AwaitNumberOfSlotsAvailableCondition(j, replications.get(j).intValue()))
-                    .map(c -> (Condition<SchedulingContext>) c)
-                    .map(Collections::singleton)
-                    .orElseGet(Collections::emptySet);
-
+        // We Increment the amount of slots required for each Job.
+        // The first job only needs the required amount of slots for itself.
+        // However, the second job could be scheduled in the same cycle if enough for both slots are available.
+        // Subsequent cycle will reset the amount of slots required. So if the third job cannot be scheduled because it
+        // required 4 + 4 + 4 Slots once the first two jobs are scheduled this method will be called again and only 4
+        // slots are required now.
+        var slotCounter = new MutableInt(0);
+        return stream.map(j -> new AwaitNumberOfSlotsAvailableCondition(j,
+                             slotCounter.addAndGet(replications.get(j).intValue())))
+                     .map(c -> (Condition<SchedulingContext>) c)
+                     .collect(Collectors.toSet());
     }
 
     @Override

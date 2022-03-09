@@ -20,13 +20,10 @@ public interface Action<T extends StateMachineContext> {
             Field field = clazz.getDeclaredField("condition");
             String conditionName = (String) field.get(null);
 
-            var condition =
-                    conditions.stream().filter(c -> conditionName.equals(c.getCondition()))
-                              .map(o -> (T) o)
-                              .collect(Collectors.toSet());
 
-
-            return condition;
+            return conditions.stream().filter(c -> conditionName.equals(c.getCondition()))
+                             .map(o -> (T) o)
+                             .collect(Collectors.toSet());
 
         } catch (NoSuchFieldException | IllegalAccessException e) {
             return Collections.emptySet();

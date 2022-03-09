@@ -7,5 +7,5 @@ spec:
   slotsPerNode: 2
   nodeLabel: "tuberlin.de/node-with-slots"
   resourcesPerSlot:
-    cpu: "125m"
-    memory: "256Mi"
+    cpu: "250m"
+    memory: "896Mi"

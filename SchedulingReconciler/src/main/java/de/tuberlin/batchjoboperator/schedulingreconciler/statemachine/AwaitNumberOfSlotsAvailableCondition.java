@@ -1,10 +1,12 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.statemachine;
 
 import de.tuberlin.batchjoboperator.common.NamespacedName;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
 
+@EqualsAndHashCode(callSuper = true)
 public class AwaitNumberOfSlotsAvailableCondition extends SchedulingCondition {
 
     public static final String condition = AWAIT_NUMBER_OF_SLOTS_CONDITION;
@@ -38,9 +40,4 @@ public class AwaitNumberOfSlotsAvailableCondition extends SchedulingCondition {
         return context.getFreeSlots().size() >= numberOfSlotsRequired;
     }
 
-
-    @Override
-    public void initialize(SchedulingContext context) {
-        super.initialize(context);
-    }
 }

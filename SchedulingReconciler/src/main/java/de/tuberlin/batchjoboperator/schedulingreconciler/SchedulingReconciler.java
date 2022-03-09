@@ -96,7 +96,6 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
     }
 
 
-
     private void removeLabelsFromJob(BatchJob job) {
         if (job.getMetadata().getLabels() == null) {
             return;
@@ -157,6 +156,7 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
         log.debug("Reconciling Scheduling: {}", resource.getMetadata().getName());
         log.debug("RV:         {}", resource.getMetadata().getResourceVersion());
         log.debug("Status:     {}", resource.getStatus().getState());
+        log.debug("Jobs:       {}", resource.getStatus().getJobStates());
         log.debug("Conditions: {}",
                 getNullSafe(() -> resource.getStatus().getConditions().stream().map(c -> c.getCondition())
                                           .collect(Collectors.toSet())));

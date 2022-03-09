@@ -19,11 +19,18 @@ import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 public class AwaitJobsScheduledCondition extends SchedulingCondition {
 
     public static final String condition = AWAIT_JOBS_SCHEDULED_CONDITION;
-    private static final Set<BatchJobState> scheduledStates = Set.of(
-            BatchJobState.ScheduledState,
+
+
+    private static final Set<BatchJobState> definitelyPastScheduledStates = Set.of(
             BatchJobState.RunningState,
             BatchJobState.CompletedState
     );
+
+    private static final Set<BatchJobState> scheduledStates = Set.of(
+            BatchJobState.ScheduledState
+    );
+
+
     @Getter
     @Setter
     private Set<JobConditionValue> jobs;
@@ -36,6 +43,15 @@ public class AwaitJobsScheduledCondition extends SchedulingCondition {
     private boolean isJobScheduled(JobConditionValue jobValue, SchedulingContext context) {
         var job = context.getJob(jobValue.getName());
         log.debug("Job {} State {}", jobValue.getName(), job.getStatus().getState());
+
+        /*
+         * Once a Job is Running or even Completed, Slot State is guaranteed to be updated. Checking it again might,
+         * even
+         * show them being free again as the job may have already completed
+         * */
+        if (definitelyPastScheduledStates.contains(job.getStatus().getState())) {
+            return true;
+        }
 
         if (!scheduledStates.contains(job.getStatus().getState())) {
             return false;

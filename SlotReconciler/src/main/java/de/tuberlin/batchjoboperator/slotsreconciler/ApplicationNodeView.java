@@ -2,6 +2,8 @@ package de.tuberlin.batchjoboperator.slotsreconciler;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.fabric8.kubernetes.api.model.Node;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.Delegate;
 
 import javax.annotation.Nonnull;
@@ -9,6 +11,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+@EqualsAndHashCode(callSuper = true)
+@Data
 public class ApplicationNodeView extends Node {
     @Delegate
     private final Node node;

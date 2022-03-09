@@ -32,28 +32,6 @@ public class SchedulingStateMachine {
 
     public static final StateMachine<SchedulingContext> STATE_MACHINE = StateMachine.of(
             /*
-                Initial State:
-                If acquisition of jobs + slots have already been done AND all Jobs are in the InQueueState
-                AcquireState is skipped and transition directly into the Submission State.
-                If any of the Jobs or Slots require acquisition `acquireSlotsAndJobs` is called and a transition into
-                the AcquireState is made!
-                NOTE: Conditions are evaluated in Order!
-             */
-//            State.<SchedulingContext>withName(SchedulingState.InitialState.name())
-//                 .condition(OnCondition.all(
-//                         log("Jobs and Slots acquired"),
-//                         SchedulingState.SubmissionState.name(),
-//                         AWAIT_JOBS_ACQUIRED_CONDITION,
-//                         AWAIT_SLOTS_ACQUIRED_CONDITION,
-//                         AWAIT_JOBS_ENQUEUE
-//                 ))
-//                 .condition(OnCondition.any(
-//                         SchedulingStateMachine::acquireSlotsAndJobs,
-//                         SchedulingState.AcquireState.name(),
-//                         AWAIT_JOBS_RELEASED_CONDITION,
-//                         AWAIT_SLOTS_RELEASED_CONDITION
-//                 )).build(),
-            /*
                 AcquireState:
                 If acquisition of jobs + slots have already been done AND all Jobs are in the InQueueState the
                 scheduling can transition into the SubmissionState.

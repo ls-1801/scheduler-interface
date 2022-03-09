@@ -6,6 +6,7 @@ import de.tuberlin.batchjoboperator.common.crd.scheduling.JobConditionValue;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -33,12 +34,7 @@ public class AwaitJobsCompletionCondition extends SchedulingCondition {
 
 
         this.jobs = this.jobs.stream()
-                             .map(p -> {
-                                 return new JobConditionValue(p.getName(), getNullSafe(() -> {
-                                     return context.getJob(p.getName()).getStatus()
-                                                   .getState() == BatchJobState.CompletedState;
-                                 }).orElse(null));
-                             })
+                             .map(p -> isJobCompleted(context, p))
                              .collect(Collectors.toSet());
 
 
@@ -60,11 +56,18 @@ public class AwaitJobsCompletionCondition extends SchedulingCondition {
                         .allMatch(JobConditionValue::getValue);
     }
 
+    @Nonnull
+    private JobConditionValue isJobCompleted(SchedulingContext context, JobConditionValue p) {
+        return new JobConditionValue(p.getName(), getNullSafe(() ->
+                context.getJob(p.getName()).getStatus()
+                       .getState() == BatchJobState.CompletedState).orElse(null));
+    }
+
 
     @Override
     public void initialize(SchedulingContext context) {
         super.initialize(context);
-        var jobs = context.getAllJobs();
-        this.jobs = jobs.stream().map(n -> new JobConditionValue(n, false)).collect(Collectors.toSet());
+        var allJobs = context.getAllJobs();
+        this.jobs = allJobs.stream().map(n -> new JobConditionValue(n, false)).collect(Collectors.toSet());
     }
 }

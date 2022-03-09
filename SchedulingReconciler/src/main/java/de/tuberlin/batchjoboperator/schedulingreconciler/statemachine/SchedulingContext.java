@@ -64,10 +64,17 @@ public class SchedulingContext implements StateMachineContext {
                             .collect(Collectors.toSet());
     }
 
+
+    private Set<Integer> freeSlots;
+
     public Set<Integer> getFreeSlots() {
-        return getSlots().getStatus().getSlots().stream().filter(occ -> occ.getState() == SlotState.FREE)
-                         .map(SlotOccupationStatus::getPosition)
-                         .collect(Collectors.toSet());
+        if (freeSlots == null) {
+            this.freeSlots = getSlots().getStatus().getSlots().stream().filter(occ -> occ.getState() == SlotState.FREE)
+                                       .map(SlotOccupationStatus::getPosition)
+                                       .collect(Collectors.toSet());
+        }
+
+        return freeSlots;
     }
 
     public Slot getSlots() {

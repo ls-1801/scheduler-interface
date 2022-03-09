@@ -6,19 +6,39 @@ spec:
   slots:
     name: batchjob-slots
     namespace: default
-  queueBased:
-    - name: batchjob-flink
-      namespace: default
-    - name: batchjob-flink
-      namespace: default
-    - name: batchjob-flink
-      namespace: default
-    - name: batchjob-flink
-      namespace: default
-    - name: batchjob-flink2
-      namespace: default
-    - name: batchjob-flink2
-      namespace: default
+  slotBased:
+    mode: strict
+    jobs:
+      - name:
+          name: batchjob-sample
+          namespace: default
+        slotIds: [ 0,2 ]
+      - name:
+          name: batchjob-flink
+          namespace: default
+        slotIds: [ 1,3 ]
+      - name:
+          name: batchjob-flink2
+          namespace: default
+        slotIds: [ 1,3 ]
+      - name:
+          name: batchjob-flink3
+          namespace: default
+        slotIds: [ 0,2 ]
+#      slots
+#  queueBased:
+#    - name: batchjob-sample
+#      namespace: default
+#    - name: batchjob-sample
+#      namespace: default
+#    - name: batchjob-flink
+#      namespace: default
+#    - name: batchjob-flink
+#      namespace: default
+#    - name: batchjob-flink2
+#      namespace: default
+#    - name: batchjob-flink2
+#      namespace: default
 #    - name: batchjob-flink2
 #      namespace: default
 #    - name: batchjob-flink2

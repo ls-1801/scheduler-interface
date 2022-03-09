@@ -13,7 +13,7 @@ public interface SchedulingStrategy {
 
     Map<NamespacedName, Long> getReplication();
 
-    Set<Condition<SchedulingContext>> awaitSlotsConditions();
+    Set<Condition<SchedulingContext>> awaitSlotsConditions(String conditionName);
 
     Set<Integer> getSlotsForJob(NamespacedName job);
 

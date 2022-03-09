@@ -12,13 +12,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingCondition.AWAIT_SLOTS_AVAILABLE_CONDITION;
+import static java.util.Collections.emptySet;
+import static java.util.function.Predicate.not;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -44,6 +47,7 @@ public class SlotBasedStrategy implements SchedulingStrategy {
                                        // And not been scheduled during the current Cycle
                                        .filter(jobName -> !context.getJobsSubmittedDuringCurrentCycle()
                                                                   .contains(jobName))
+                                       .filter(jobName -> !context.getAlreadyScheduledJobs().contains(jobName))
                                        .collect(Collectors.toSet());
 
         return spec.getJobs().stream()
@@ -71,16 +75,28 @@ public class SlotBasedStrategy implements SchedulingStrategy {
     }
 
     @Override
-    public Set<Condition<SchedulingContext>> awaitSlotsConditions() {
-        var stream = enqueuedJobs().stream()
-                                   .map(j -> new AwaitSlotsAvailableCondition(j.getName(), j.getSlotIds()))
-                                   .map(c -> (Condition<SchedulingContext>) c);
-
-        if (spec.getMode() == SlotSchedulingMode.STRICT) {
-            return stream.findFirst().map(Collections::singleton).orElseGet(Collections::emptySet);
+    public Set<Condition<SchedulingContext>> awaitSlotsConditions(String conditionName) {
+        if (!AWAIT_SLOTS_AVAILABLE_CONDITION.equals(conditionName)) {
+            return emptySet();
         }
 
-        return stream.collect(Collectors.toSet());
+        var usedSlots = new HashSet<Integer>();
+        var conditions = new HashSet<Condition<SchedulingContext>>();
+        for (SlotSchedulingItem item : enqueuedJobs()) {
+            usedSlots.addAll(item.getSlotIds());
+            conditions.add(new AwaitSlotsAvailableCondition(item.getName(), Set.copyOf(usedSlots)));
+
+            /*
+            Here the same mechanism is used as it is in the QueueBasedStrategy, where a Job in Strict Mode can only
+            run if its predecessor can also be scheduled. However, in relaxed mode this is not necessary, and we can
+            clear the used slots.
+             */
+            if (spec.getMode() == SlotSchedulingMode.RELAXED) {
+                usedSlots.clear();
+            }
+        }
+
+        return Set.copyOf(conditions);
     }
 
 
@@ -91,12 +107,12 @@ public class SlotBasedStrategy implements SchedulingStrategy {
 
         if (!jobMap.containsKey(name)) {
             log.error("Asked to find Slots for a job that is either not part of the Spec or already reserved");
-            return Collections.emptySet();
+            return emptySet();
         }
 
         if (!context.getFreeSlots().containsAll(jobMap.get(name))) {
             log.error("Condition should have prevented that job from beeing runnable");
-            return Collections.emptySet();
+            return emptySet();
         }
 
         return jobMap.get(name);
@@ -105,8 +121,9 @@ public class SlotBasedStrategy implements SchedulingStrategy {
     @Override
     public List<NamespacedName> orderRunnableJobs(Set<NamespacedName> runnableJobs) {
         var alreadyScheduledJobs = context.getAlreadyScheduledJobs();
-        var queueWithoutAlreadyRunning =
-                getJobsDistinctInOrder().stream().filter(alreadyScheduledJobs::contains).collect(Collectors.toList());
+        var queueWithoutAlreadyRunning = getJobsDistinctInOrder().stream()
+                                                                 .filter(not(alreadyScheduledJobs::contains))
+                                                                 .collect(Collectors.toList());
 
         var listOfRunnableJobs = new ArrayList<NamespacedName>();
 
