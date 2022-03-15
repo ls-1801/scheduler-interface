@@ -23,14 +23,9 @@ class BatchJobConditionProvider implements ConditionProvider<BatchJobContext> {
     public static BatchJobConditionProvider formResource(BatchJob batchJob, BatchJobContext context) {
         var map = batchJob.getStatus().getConditions().stream()
                           .map(a -> (Condition<BatchJobContext>) a)
-                          .collect(Collectors.toMap(c -> c.getCondition(), Function.identity()));
+                          .collect(Collectors.toMap(Condition::getCondition, Function.identity()));
         return new BatchJobConditionProvider(map, context);
     }
-
-    public void updateConditions(BatchJob batchJob) {
-
-    }
-
 
     @Override
     public Set<Condition<BatchJobContext>> getCondition(String conditionName) {

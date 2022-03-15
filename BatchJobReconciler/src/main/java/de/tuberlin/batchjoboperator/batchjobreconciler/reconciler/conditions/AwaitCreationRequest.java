@@ -15,6 +15,7 @@ import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 public class AwaitCreationRequest extends BatchJobCondition {
 
     public static final String condition = AWAIT_CREATION_REQUEST_CONDITION;
+
     @JsonIgnore
     @Nullable
     @Getter

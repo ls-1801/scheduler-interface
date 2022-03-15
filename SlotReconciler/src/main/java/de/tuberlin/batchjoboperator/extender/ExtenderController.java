@@ -28,6 +28,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static de.tuberlin.batchjoboperator.common.NamespacedName.getName;
+import static de.tuberlin.batchjoboperator.common.NamespacedName.getNamespace;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_GHOSTPOD_WILL_BE_PREEMPTED_BY_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_IDS_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_LABEL_NAME;
@@ -53,9 +55,24 @@ public class ExtenderController {
         return slots.getStatus().getSlots().stream().filter(slot -> position == slot.getPosition()).findFirst();
     }
 
+    private void debugLogSlots(Slot slots) {
+        log.debug("name:         {}", getName(slots));
+        log.debug("namespace     {}", getNamespace(slots));
+        log.debug("state:        {}", slots.getStatus().getState());
+        log.debug("slots:        {}",
+                slots.getStatus().getSlots().stream().map(occ -> occ.getState() == SlotState.FREE)
+                     .collect(Collectors.toList()));
+
+        log.debug("reservations: {}", slots.getStatus().getSlots().stream().map(occ -> occ.getReservedFor())
+                                           .collect(Collectors.toList()));
+
+
+    }
+
     @Nullable
     private Slot getSlotsForPod(Pod pod) {
-        return client.resources(Slot.class).inNamespace(getNamespace())
+        return client.resources(Slot.class)
+                     .inNamespace(getNamespace(pod))
                      .withName(ApplicationPodView.wrap(pod).getLabel(SLOT_POD_LABEL_NAME)
                                                  .orElseThrow(() -> new RuntimeException("Not " +
                                                          "Interested in Pod")))
@@ -68,9 +85,7 @@ public class ExtenderController {
     }
 
     @PostMapping("/filter")
-    public ExtenderFilterResult filter(@RequestBody ExtenderArgs request) {
-        verifyNamespaceOfRequestedPod(request.getPod());
-
+    public ExtenderFilterResult filter(@RequestBody ExtenderFilterArgs request) {
         log.info("Filter Request: {}", request);
         var requestPod = refreshPod(request.getPod());
         var nodeNames = request.getNodes().getItems().stream()
@@ -135,17 +150,6 @@ public class ExtenderController {
         };
     }
 
-
-    private String getNamespace() {
-        return "default";
-    }
-
-    private void verifyNamespaceOfRequestedPod(Pod pod) {
-        if (!getNamespace().equals(ApplicationPodView.wrap(pod).getNamespace())) {
-            throw new RuntimeException("Pod is in a invalid namespace");
-        }
-    }
-
     /**
      * 1. Extract the Slot target Ids from the SLOT_IDS_NAME label
      * 2. If the pod already has a reserved slot return none
@@ -164,7 +168,7 @@ public class ExtenderController {
 
         var slotIds = SlotIDsAnnotationString.parse(slotIdsCSL).getSlotIds();
         var slots = verifySlotsAreReady(getSlotsForPod(requestPod));
-
+        debugLogSlots(slots);
         var slotReporter = new SlotStatusReporter(client, slots);
 
         var reservedSlotOpt = slotIds.stream()
@@ -202,7 +206,11 @@ public class ExtenderController {
         // Update slot status
         markSlotAsPreemptedBy(firstFreeSlot, requestPod);
         updatePodWithSlotId(requestPod, firstFreeSlot);
-        slotReporter.reserveSlot(firstFreeSlot, requestPod);
+        reserveSlot(slots, firstFreeSlot, requestPod);
+        log.debug("#" .repeat(80));
+        log.debug("#" .repeat(33) + " AFTER UPDATE " + "#" .repeat(33));
+        log.debug("#" .repeat(80));
+        debugLogSlots(slots);
 
         return Optional.of(oldSlot);
     }
@@ -211,7 +219,6 @@ public class ExtenderController {
     public ExtenderPreemptionResult preemption(@RequestBody ExtenderPreemptionArgs request) {
         log.info("Preemption Request: {}", request);
         var requestPod = refreshPod(request.getPod());
-        verifyNamespaceOfRequestedPod(requestPod);
         log.info("Potential Nodes: {}", request.getNodeNameToVictims().keySet());
 
         var freeSlot = preemptionInternal(requestPod, request.getNodeNameToVictims().keySet());
@@ -248,11 +255,6 @@ public class ExtenderController {
             throw new RuntimeException("Slots not ready");
         }
 
-//        if (slots.getStatus().getState() != SlotsStatusState.IN_PROGRESS || slots.getStatus()
-//                                                                                 .getCurrentScheduling() == null) {
-//            throw new RuntimeException("Slot does not expect to be scheduled");
-//        }
-
         slots.getStatus().getSlots().forEach(this::verifySlotStatus);
 
         return slots;
@@ -260,25 +262,47 @@ public class ExtenderController {
 
     private void markSlotAsPreemptedBy(SlotOccupationStatus slotToBePreempted, Pod preemptor) {
         log.debug("Marking pod {} as preempted", slotToBePreempted.getPodName());
-        var pod = client.pods().inNamespace(getNamespace()).withName(slotToBePreempted.getPodName()).get();
-        if (pod == null) {
-            log.warn("Pod that needs to be preempted does not exist");
-            return;
-        }
-
-        pod.getMetadata().getLabels().put(SLOT_GHOSTPOD_WILL_BE_PREEMPTED_BY_NAME, preemptor.getMetadata().getName());
-        client.pods().inNamespace(getNamespace()).patch(pod);
+        client.pods().inNamespace(getNamespace(preemptor)).withName(slotToBePreempted.getPodName()).edit(editPod -> {
+            editPod.getMetadata().getLabels().put(SLOT_GHOSTPOD_WILL_BE_PREEMPTED_BY_NAME,
+                    preemptor.getMetadata().getName());
+            return editPod;
+        });
     }
 
     private void updatePodWithSlotId(Pod requestPod, SlotOccupationStatus status) {
-        var pod = client.pods().inNamespace(getNamespace()).withName(requestPod.getMetadata().getName()).get();
-        if (pod == null) {
-            throw new RuntimeException("Pod does not exist");
+        client.pods().inNamespace(getNamespace(requestPod)).withName(requestPod.getMetadata().getName())
+              .edit(editPod -> {
+                  editPod.getMetadata().getLabels().putAll(Map.of(
+                          SLOT_POD_SLOT_ID_NAME, status.getSlotPositionOnNode() + "",
+                          SLOT_POD_TARGET_NODE_NAME, status.getNodeName()
+                  ));
+
+                  return editPod;
+              });
+    }
+
+    public void reserveSlot(Slot slots, SlotOccupationStatus slot, Pod pod) {
+        if (!slots.getStatus().getSlots().contains(slot)) {
+            throw new RuntimeException("Trying to reserve slot, that is not part of the StatusReporter");
         }
-        pod.getMetadata().getLabels().putAll(Map.of(
-                SLOT_POD_SLOT_ID_NAME, status.getSlotPositionOnNode() + "",
-                SLOT_POD_TARGET_NODE_NAME, status.getNodeName()
-        ));
-        client.pods().inNamespace(getNamespace()).patch(pod);
+        var view = ApplicationPodView.wrap(pod);
+
+        client.resources(Slot.class).inNamespace(getNamespace(slots)).withName(getName(slots))
+              .editStatus((editSlots) -> {
+                  var slotToBeReserved = editSlots.getStatus().getSlots().stream()
+                                                  .filter(editSlot -> editSlot.getPosition() == slot.getPosition())
+                                                  .findFirst().orElseThrow(() -> new RuntimeException("Unexpected"));
+
+                  if (slotToBeReserved.getState() != SlotState.FREE) {
+                      throw new RuntimeException("Unexpected, Slot should be free");
+                  }
+
+                  slotToBeReserved.setState(SlotState.RESERVED);
+                  slotToBeReserved.setReservedFor(view.getName());
+
+                  return editSlots;
+
+
+              });
     }
 }

@@ -19,10 +19,6 @@ spec:
           properties:
             spec:
               properties:
-                foo:
-                  type: string
-                requeue:
-                  type: boolean
                 sparkSpec:
                   properties:
                     arguments:
@@ -5096,20 +5092,34 @@ spec:
                         type: object
                       type: array
                   type: object
+                externalScheduler:
+                  additionalProperties:
+                    items:
+                      x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                    type: array
+                  x-kubernetes-preserve-unknown-fields: true
+                  type: object
               type: object
+              oneOf:
+                - properties:
+                    sparkSpec: { }
+                - properties:
+                    flinkSpec: { }
             status:
               properties:
                 state:
                   enum:
+                    - InitState
                     - ReadyState
                     - InQueueState
                     - SubmittedState
+                    - ScheduledState
                     - RunningState
                     - CompletedState
                     - FailedState
                     - FailedSubmissionState
                     - UnknownState
-                    - state
                   type: string
                 latestResourceVersion:
                   type: integer
@@ -5158,8 +5168,6 @@ spec:
                         type: string
                       value:
                         type: boolean
-                      lastChangeTimestamp:
-                        type: string
                       name:
                         properties:
                           namespace:
@@ -5169,10 +5177,10 @@ spec:
                         type: object
                       error:
                         type: string
+                      lastUpdateTimestamp:
+                        type: string
                     type: object
                   type: array
-                observedGeneration:
-                  type: integer
               type: object
           type: object
       served: true

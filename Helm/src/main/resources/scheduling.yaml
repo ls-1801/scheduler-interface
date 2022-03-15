@@ -12,19 +12,25 @@ spec:
       - name:
           name: batchjob-sample
           namespace: default
-        slotIds: [ 0,2 ]
+        slotIds: [ 0,1 ]
       - name:
           name: batchjob-flink
           namespace: default
-        slotIds: [ 1,3 ]
-      - name:
-          name: batchjob-flink2
-          namespace: default
-        slotIds: [ 1,3 ]
-      - name:
-          name: batchjob-flink3
-          namespace: default
-        slotIds: [ 0,2 ]
+        slotIds: [ 0,1 ]
+---
+apiVersion: batchjob.gcr.io/v1alpha1
+kind: Scheduling
+metadata:
+  name: profiler-scheduling
+spec:
+  slots:
+    name: profiler-slots
+    namespace: default
+  queueBased:
+    - name: batchjob-flink2
+      namespace: default
+    - name: batchjob-flink3
+      namespace: default
 #      slots
 #  queueBased:
 #    - name: batchjob-sample

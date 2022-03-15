@@ -7,5 +7,18 @@ spec:
   slotsPerNode: 2
   nodeLabel: "tuberlin.de/node-with-slots"
   resourcesPerSlot:
-    cpu: "250m"
+    cpu: "200m"
+    memory: "896Mi"
+
+---
+apiVersion: batchjob.gcr.io/v1alpha1
+kind: Slot
+metadata:
+  name: profiler-slots
+  namespace: default
+spec:
+  slotsPerNode: 2
+  nodeLabel: "tuberlin.de/node-with-slots-profiler"
+  resourcesPerSlot:
+    cpu: "200m"
     memory: "896Mi"

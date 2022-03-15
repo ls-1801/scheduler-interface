@@ -2,6 +2,7 @@ package de.tuberlin.batchjoboperator.slotsreconciler;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import de.tuberlin.batchjoboperator.common.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotOccupationStatus;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotSpec;
@@ -18,8 +19,6 @@ import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.api.reconciler.ControllerConfiguration;
 import io.javaoperatorsdk.operator.api.reconciler.DeleteControl;
@@ -46,12 +45,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static de.tuberlin.batchjoboperator.common.NamespacedName.getNamespace;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.GHOST_POD_NAME_PREFIX;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_GHOSTPOD_WILL_BE_PREEMPTED_BY_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_GENERATION_NAME;
@@ -86,74 +84,19 @@ public class SlotReconciler implements Reconciler<Slot>, EventSourceInitializer<
         return Reconciler.super.cleanup(resource, context);
     }
 
-    Function<Node, String> getNodeName() {
-        return hm -> hm.getMetadata().getName();
-    }
 
-    private boolean waitUntilDeletionOfPods(List<ApplicationPodView> pods) {
-        if (pods.isEmpty())
-            return true;
-
-
-        final CountDownLatch deleteLatch = new CountDownLatch(pods.size());
-        pods.forEach(pod -> {
-            kubernetesClient.pods().inNamespace(pod.getNamespace()).delete(pod);
-            kubernetesClient.pods().inNamespace(pod.getNamespace()).withName(pod.getName())
-                            .watch(new Watcher<>() {
-                                @Override
-                                public void eventReceived(Action action, Pod resource) {
-                                    if (action == Action.DELETED) {
-                                        deleteLatch.countDown();
-                                    }
-                                }
-
-                                @Override
-                                public void onClose(WatcherException cause) {
-
-                                }
-                            });
-        });
-
-        try {
-            return deleteLatch.await(10, TimeUnit.MINUTES);
-        } catch (InterruptedException e) {
-            return false;
-        }
-    }
-
-
-
-
-    /*
-     * TODO:
-     *  - Deployment of pods inside a slot
-     *  - Status should reflect what is going on in the Cluster
-     *      - Overview of empty Slots and occupied Slots
-     *      - Problems
-     *      - In Progress
-     *  - Clarify the Way Slots are Implemented:
-     *      - The Slots CRD controls only Nodes which have the specified label inside the Spec
-     *      - The Slots CRD make sure that there are always the specified amount of pods with the correct amount of
-     *        request resources deployed on the cluster
-     *      - A Slot can either be a ghost-pod: which is a pod that is not doing anything just reserving resources or
-     *        an application pod
-     *      - ghost pods can be preempted anytime an application pod wants to take its slot
-     *      - pods t
-     *
-     *  -
-     */
-
-    /**
-     * The Idea of a Slot is to reserve Resources on a node that can later be used for a batch job
-     */
     @Override
     public UpdateControl<Slot> reconcile(Slot resource, Context context) {
-        log.info("Reconciling: {}", resource.getMetadata().getName());
+        return reconcileInternal(resource, context);
+    }
+
+
+    private UpdateControl<Slot> reconcileInternal(Slot resource, Context context) {
         addToResourceMap(resource);
         PodsPerNode ghostPodsPerNode;
         PodList ghostPods;
         try {
-            ghostPods = kubernetesClient.pods().inNamespace(getNamespace())
+            ghostPods = kubernetesClient.pods().inNamespace(getNamespace(resource))
                                         .withLabel(SLOT_POD_LABEL_NAME, resource.getMetadata().getName())
                                         .list();
             ghostPodsPerNode = PodsPerNode.groupByNode(ghostPods);
@@ -164,10 +107,12 @@ public class SlotReconciler implements Reconciler<Slot>, EventSourceInitializer<
 
         // Manual preemption is necessary if scheduler preemption is not triggered. This happens if enough resource
         // are available on a node to place jobs, that should preempt the ghostpod, next to it on the node.
-        var podsThatNeedToBePreempted = ghostPodsPerNode.preemptEmptySlots();
-        podsThatNeedToBePreempted.getPods()
-                                 .forEach(pod -> kubernetesClient.pods().inNamespace(getNamespace()).delete(pod));
-        ghostPodsPerNode = ghostPodsPerNode.diff(podsThatNeedToBePreempted);
+        var podsThatNeedToBePreempted = ghostPodsPerNode.getPreemptedSlots();
+        podsThatNeedToBePreempted.getPods().stream()
+                                 .peek(pod -> log.debug("Deleting Preempted Pod: {}", NamespacedName.of(pod)))
+                                 .forEach(pod -> kubernetesClient.pods().inNamespace(getNamespace(resource))
+                                                                 .delete(pod));
+        ghostPodsPerNode = ghostPodsPerNode.removePreemptedSlots(podsThatNeedToBePreempted);
 
 
         // Calculate Desired State
@@ -186,22 +131,24 @@ public class SlotReconciler implements Reconciler<Slot>, EventSourceInitializer<
         // First Verify
         var problems = SlotProblems.builder();
         var nonGhostPods = kubernetesClient.pods().inAnyNamespace().withoutLabel(SLOT_POD_LABEL_NAME).list();
-        var nodeNonGhostRequestMap = ClusterRequestResources.aggregate(nonGhostPods.getItems());
+        var nodeNonGhostRequestMap = ClusterRequestedResources.aggregate(nonGhostPods.getItems());
         reportProblemIfNotEnoughAllocatableResourcesPerNode(problems, nodesWithLabel, nodeNonGhostRequestMap, resource);
         if (problems.build().anyProblems()) {
-            kubernetesClient.pods().inNamespace(getNamespace()).delete(ghostPods.getItems());
+            kubernetesClient.pods().inNamespace(getNamespace(resource)).delete(ghostPods.getItems());
             return problems.build().updateStatusIfRequired(resource);
         }
 
         var notDesiredPods = ghostPodsPerNode.diff(desiredPods);
         log.info("Deleting not desired Pods: {}", notDesiredPods.getPods());
-        notDesiredPods.getPods().forEach(pod -> kubernetesClient.pods().inNamespace(getNamespace()).delete(pod));
+        notDesiredPods.getPods()
+                      .forEach(pod -> kubernetesClient.pods().inNamespace(getNamespace(resource)).delete(pod));
 //        waitUntilDeletionOfPods(notDesiredPods.getPods());
 
         var desiredButNotExistingPods = desiredPods.diff(ghostPodsPerNode);
         log.info("Creating desired but not existing Pods: {}", desiredButNotExistingPods.getPods());
         desiredButNotExistingPods.getPods()
-                                 .forEach(pod -> kubernetesClient.pods().inNamespace(getNamespace()).create(pod));
+                                 .forEach(pod -> kubernetesClient.pods().inNamespace(getNamespace(resource))
+                                                                 .create(pod));
 
         var actualDesiredState = ghostPodsPerNode.diff(notDesiredPods).union(desiredButNotExistingPods);
         log.info("Updating Preemption status for desired and already existing Pods: {}", actualDesiredState.getPods());
@@ -317,24 +264,26 @@ public class SlotReconciler implements Reconciler<Slot>, EventSourceInitializer<
     }
 
     private void checkPreemptionStatus(ApplicationPodView pod) {
-        if (pod.getLabel(SLOT_GHOSTPOD_WILL_BE_PREEMPTED_BY_NAME).isEmpty())
+        var preemptorLabel = pod.getLabel(SLOT_GHOSTPOD_WILL_BE_PREEMPTED_BY_NAME);
+
+        if (preemptorLabel.isEmpty())
             return;
 
-        var preemptor = pod.getLabel(SLOT_GHOSTPOD_WILL_BE_PREEMPTED_BY_NAME).get();
+        var preemptor = preemptorLabel.get();
 
-        var preemptorPod = kubernetesClient.pods().inNamespace(getNamespace()).withName(preemptor).get();
+        var preemptorPod = kubernetesClient.pods().inNamespace(getNamespace(pod)).withName(preemptor).get();
 
         if (preemptorPod == null) {
             log.debug("Preemptor Pod does not exist");
             pod.getMetadata().getLabels().remove(SLOT_GHOSTPOD_WILL_BE_PREEMPTED_BY_NAME);
-            kubernetesClient.pods().inNamespace(getNamespace()).patch(pod);
+            kubernetesClient.pods().inNamespace(getNamespace(pod)).patch(pod);
         }
     }
 
     private void reportProblemIfNotEnoughAllocatableResourcesPerNode(
             SlotProblems.SlotProblemsBuilder builder,
             NodeList nodeList,
-            ClusterRequestResources clusterRequestResources,
+            ClusterRequestedResources clusterRequestResources,
             Slot slot
     ) {
         nodeList.getItems().forEach(node -> {
@@ -378,7 +327,7 @@ public class SlotReconciler implements Reconciler<Slot>, EventSourceInitializer<
 
         var pod = new PodBuilder().withNewMetadata()
                                   .withName(name)
-                                  .withNamespace(getNamespace())
+                                  .withNamespace(getNamespace(slot))
                                   .withLabels(Map.of(
                                           SLOT_POD_LABEL_NAME, slot.getMetadata().getName(),
                                           SLOT_POD_TARGET_NODE_NAME, node.getMetadata().getName(),
@@ -419,12 +368,8 @@ public class SlotReconciler implements Reconciler<Slot>, EventSourceInitializer<
         return new PodBuilder(pod).withSpec(spec).build();
     }
 
-    private String getNamespace() {
-        return "default";
-    }
 
-
-    private List<SlotProblems.Problem> nodeEligibleForSlots(Node node, ClusterRequestResources nodeRequestMap,
+    private List<SlotProblems.Problem> nodeEligibleForSlots(Node node, ClusterRequestedResources nodeRequestMap,
                                                             SlotSpec spec) {
         Function<String, Optional<SlotProblems.Problem>> enoughResource = (String resourceName) -> {
             var inUse = nodeRequestMap.getRequestedResources(node, resourceName);
@@ -452,7 +397,7 @@ public class SlotReconciler implements Reconciler<Slot>, EventSourceInitializer<
     public List<EventSource> prepareEventSources(EventSourceContext<Slot> context) {
 
         var slotsInCluster = kubernetesClient.resources(Slot.class)
-                                             .inNamespace(getNamespace()).list().getItems();
+                                             .inAnyNamespace().list().getItems();
 
         this.slots =
                 slotsInCluster.stream().collect(
@@ -469,7 +414,7 @@ public class SlotReconciler implements Reconciler<Slot>, EventSourceInitializer<
                                     .runnableInformer(0);
 
         var podInformer = kubernetesClient.pods()
-                                          .inNamespace(getNamespace())
+                                          .inAnyNamespace()
                                           .withLabel(SLOT_POD_LABEL_NAME)
                                           .runnableInformer(0);
 

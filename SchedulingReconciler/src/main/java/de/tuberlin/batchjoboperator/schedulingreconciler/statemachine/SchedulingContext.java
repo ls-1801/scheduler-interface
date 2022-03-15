@@ -15,9 +15,11 @@ import de.tuberlin.batchjoboperator.schedulingreconciler.strategy.SlotBasedStrat
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -59,8 +61,17 @@ public class SchedulingContext implements StateMachineContext {
         return getStrategy().getJobsDistinctInOrder();
     }
 
+
+    private static final Set<SchedulingJobState.SchedulingJobStateEnum> alreadyScheduledStates = Set.of(
+            SchedulingJobState.SchedulingJobStateEnum.Submitted,
+            SchedulingJobState.SchedulingJobStateEnum.Scheduled,
+            SchedulingJobState.SchedulingJobStateEnum.Completed
+    );
+
     public Set<NamespacedName> getAlreadyScheduledJobs() {
-        return getResource().getStatus().getJobStates().stream().map(SchedulingJobState::getName)
+        return getResource().getStatus().getJobStates().stream()
+                            .filter(js -> alreadyScheduledStates.contains(js.getState()))
+                            .map(SchedulingJobState::getName)
                             .collect(Collectors.toSet());
     }
 
@@ -167,22 +178,58 @@ public class SchedulingContext implements StateMachineContext {
         submitJob(name);
     }
 
+    @SneakyThrows
+    private void logJobEvent(NamespacedName name, SchedulingJobState.SchedulingJobStateEnum eventType) {
+
+        var jobState = new SchedulingJobState(name, eventType);
+
+        if (resource.getStatus().getJobStates().contains(jobState))
+            return;
+
+        resource.getStatus().getJobStates().add(jobState);
+        var event = new io.fabric8.kubernetes.api.model.EventBuilder()
+                .withNewEventTime().withTime(Instant.now().toString()).endEventTime()
+                .withNewInvolvedObject()
+                .withName(resource.getMetadata().getName())
+                .withNamespace(resource.getMetadata().getNamespace())
+                .withApiVersion(resource.getApiVersion())
+                .withKind(resource.getKind())
+                .withResourceVersion(resource.getMetadata().getResourceVersion())
+                .withUid(resource.getMetadata().getUid())
+                .endInvolvedObject()
+                .withKind("Event")
+                .withMessage("Job Status has Changed to: " + jobState)
+                .withNewMetadata()
+                .withGenerateName(resource.getMetadata().getName() + "-job-event")
+                .withNamespace(resource.getMetadata().getNamespace())
+                .endMetadata()
+                .withReason(jobState.toString())
+                .withReportingComponent("Scheduling-Operator")
+                .withReportingInstance("THE Scheduling-Operator")
+                .withNewSource()
+                .withComponent("Scheduling-Operator")
+                .endSource()
+                .withType("Normal")
+                .withAction("State Change")
+                .build();
+
+        client.v1().events().inNamespace(resource.getMetadata().getNamespace()).create(event);
+    }
+
     public void jobScheduledEvent(NamespacedName name) {
-        var jobState = new SchedulingJobState(name, SchedulingJobState.SchedulingJobStateEnum.Scheduled);
-        getResource().getStatus().getJobStates().remove(jobState);
-        getResource().getStatus().getJobStates().add(jobState);
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.Scheduled);
     }
 
     public void jobCompletedEvent(NamespacedName name) {
-        var jobState = new SchedulingJobState(name, SchedulingJobState.SchedulingJobStateEnum.Completed);
-        getResource().getStatus().getJobStates().remove(jobState);
-        getResource().getStatus().getJobStates().add(jobState);
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.Completed);
     }
 
     private void submitJob(NamespacedName name) {
-        resource.getStatus().getJobStates().add(
-                new SchedulingJobState(name, SchedulingJobState.SchedulingJobStateEnum.Submitted));
-
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.Submitted);
         jobsSubmittedDuringCurrentCycle.add(name);
+    }
+
+    public void jobInQueueEvent(NamespacedName name) {
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.InQueue);
     }
 }

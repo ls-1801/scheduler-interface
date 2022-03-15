@@ -7,13 +7,19 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
 
-@Getter
 public class ComparePodByNameWrapper {
-    transient private final ApplicationPodView pod;
+    @Getter
+    private final ApplicationPodView pod;
+    private final boolean ghostPod;
 
 
     public ComparePodByNameWrapper(ApplicationPodView pod) {
+        this(pod, false);
+    }
+
+    public ComparePodByNameWrapper(ApplicationPodView pod, boolean compareGhostPodFlag) {
         this.pod = pod;
+        this.ghostPod = compareGhostPodFlag && pod.isGhostPod();
     }
 
     @Override
@@ -22,6 +28,7 @@ public class ComparePodByNameWrapper {
         if (o == null || getClass() != o.getClass()) return false;
         ComparePodByNameWrapper that = (ComparePodByNameWrapper) o;
         return Objects.equals(pod.getSlotId(), that.pod.getSlotId()) &&
+                this.ghostPod == that.ghostPod &&
                 this.requestsMatchWithDelta(that.getPod().getRequestMap(), 5);
     }
 
@@ -42,6 +49,6 @@ public class ComparePodByNameWrapper {
 
     @Override
     public int hashCode() {
-        return Objects.hash(pod.getRequestMap(), pod.getSlotId());
+        return Objects.hash(pod.getRequestMap(), pod.getSlotId(), this.ghostPod);
     }
 }

@@ -18,8 +18,6 @@ import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.
 @Data
 public class BatchJobStatus {
     private BatchJobState state;
-    @Nullable
-    private Long latestResourceVersion;
     private List<ScheduledEvents> scheduledEvents;
 
     @Nullable

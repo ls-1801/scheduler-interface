@@ -4,7 +4,7 @@ import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.Quantity;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 
 import static java.util.stream.Collectors.toMap;
@@ -22,7 +22,7 @@ public class ClusterAllocatableResources {
     }
 
 
-    public static ClusterAllocatableResources aggregate(List<Node> nodes) {
+    public static ClusterAllocatableResources aggregate(Collection<Node> nodes) {
         var map = nodes
                 .stream()
                 .collect(

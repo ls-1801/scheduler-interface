@@ -47,7 +47,7 @@ public class SchedulingStateMachine {
                          AWAIT_SLOTS_RELEASED_CONDITION
                  ))
                  .condition(OnCondition.all(
-                         log("Jobs and Slots acquired"),
+                         SchedulingStateMachine::logInQueueEvents,
                          SchedulingState.SubmissionState.name(),
                          AWAIT_JOBS_ACQUIRED_CONDITION,
                          AWAIT_SLOTS_ACQUIRED_CONDITION,
@@ -74,7 +74,7 @@ public class SchedulingStateMachine {
                                 ))
                                 .subState(State.<SchedulingContext>withName(SchedulingState.SubmissionState.name())
                                                .condition(OnCondition.all(
-                                                       log("Submitted Jobs where scheduled"),
+                                                       SchedulingStateMachine::logScheduledEvents,
                                                        SchedulingState.ConfirmationState.name(),
                                                        AWAIT_JOBS_SCHEDULED_CONDITION
                                                ))
@@ -162,14 +162,23 @@ public class SchedulingStateMachine {
 
     }
 
-    public static void updateQueue(Set<Condition<SchedulingContext>> conditions, SchedulingContext context) {
-        log.info("Queue was updated");
-
-    }
-
     public static Action<SchedulingContext> log(String message) {
         return (Set<Condition<SchedulingContext>> conditions, SchedulingContext context) -> {
             log.info("{}", message);
         };
+    }
+
+    public static void logInQueueEvents(Set<Condition<SchedulingContext>> conditions, SchedulingContext context) {
+        var enqueue = Action.getConditions(conditions, AwaitJobsEnqueueCondition.class);
+        enqueue.forEach(c ->
+                c.getJobs().forEach(j -> context.jobInQueueEvent(j.getName()))
+        );
+    }
+
+    public static void logScheduledEvents(Set<Condition<SchedulingContext>> conditions, SchedulingContext context) {
+        var enqueue = Action.getConditions(conditions, AwaitJobsScheduledCondition.class);
+        enqueue.forEach(c ->
+                c.getJobs().forEach(j -> context.jobScheduledEvent(j.getName()))
+        );
     }
 }

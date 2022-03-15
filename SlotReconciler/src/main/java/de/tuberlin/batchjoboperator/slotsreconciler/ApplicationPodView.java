@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
+import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_IS_GHOSTPOD_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_SLOT_ID_NAME;
 
 @Slf4j
@@ -92,5 +93,10 @@ public class ApplicationPodView extends Pod {
                 getNamespace(),
                 getName()
         );
+    }
+
+    public boolean isGhostPod() {
+        var isGhostPod = getLabel(SLOT_POD_IS_GHOSTPOD_NAME).orElse("false");
+        return Boolean.parseBoolean(isGhostPod);
     }
 }

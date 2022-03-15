@@ -1,6 +1,8 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.tuberlin.batchjoboperator.schedulingreconciler.external.ExternalMapper;
+import de.tuberlin.batchjoboperator.schedulingreconciler.external.ExternalMapperImpl;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingJobConditionDeserializer;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -18,6 +20,11 @@ public class Config {
     @Bean
     public SchedulingReconciler schedulingReconciler(KubernetesClient client) {
         return new SchedulingReconciler(client);
+    }
+
+    @Bean
+    public ExternalMapper externalMapper() {
+        return new ExternalMapperImpl();
     }
 
     @Bean

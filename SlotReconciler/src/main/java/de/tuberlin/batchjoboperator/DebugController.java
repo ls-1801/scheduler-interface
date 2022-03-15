@@ -3,7 +3,7 @@ package de.tuberlin.batchjoboperator;
 import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
 import de.tuberlin.batchjoboperator.slotsreconciler.ClusterAllocatableResources;
 import de.tuberlin.batchjoboperator.slotsreconciler.ClusterAvailableResources;
-import de.tuberlin.batchjoboperator.slotsreconciler.ClusterRequestResources;
+import de.tuberlin.batchjoboperator.slotsreconciler.ClusterRequestedResources;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ public class DebugController {
     @GetMapping(value = "/debug/node-set-up")
     public List<String> setupLabelsOnNode(@RequestParam("count") Integer count) {
 
-        var requested = ClusterRequestResources.aggregate(client.pods().list().getItems());
+        var requested = ClusterRequestedResources.aggregate(client.pods().list().getItems());
         var slots = client.resources(Slot.class).inNamespace("default").list();
         if (slots.getItems().size() != 1) {
             throw new RuntimeException("Only a single Slot is supported");

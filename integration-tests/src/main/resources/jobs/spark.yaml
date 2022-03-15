@@ -1,9 +1,19 @@
 apiVersion: batchjob.gcr.io/v1alpha1
 kind: BatchJob
 metadata:
-  name: batchjob-sample
+  name: batchjob-spark
 spec:
-  requeue: true
+  externalScheduler:
+    group:
+      - with: something
+        number: 23
+    co-locations:
+      - with: batchjob-spark2
+        average-runtime: 420
+      - with: batchjob-spark3
+        average-runtime: 520
+      - with: batchjob-spark4
+        average-runtime: 620
   sparkSpec:
     type: Scala
     mode: cluster

@@ -31,8 +31,7 @@ public class BatchJobStateMachine {
              */
             State.<BatchJobContext>withName(ReadyState.name())
                  .condition(OnCondition.any(
-                         (conditions, context) -> log.info("Enqueue " +
-                                 "Requested: Moved to InQueueState"),
+                         BatchJobReconciler::enqueueRequest,
                          InQueueState.name(),
                          AWAIT_ENQUEUE_REQUEST_CONDITION
                  )).build(),
@@ -124,7 +123,8 @@ public class BatchJobStateMachine {
                               // not explicitly creating Conditions for all kinds of Errors. Conditions can return an
                               // error which will be picked up by the State machine and cause transition to the closest
                               // parent ErrorState or the defaultErrorState defined by the StateMachine
-                              .errorState(State.<BatchJobContext>withName(BatchJobState.FailedState.name()).build())
+                              .errorState(State.<BatchJobContext>withName(BatchJobState.FailedState.name())
+                                               .build())
                               .condition(OnCondition.all(
                                       // None Of these will be called, since debug is always false
                                       (cs, c) -> {

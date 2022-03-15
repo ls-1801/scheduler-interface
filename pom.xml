@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <packaging>pom</packaging>
-    <groupId>de.tu-berlin</groupId>
+    <groupId>de.tuberlin</groupId>
     <artifactId>BatchJobOperator</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>BatchJobOperator</name>
@@ -20,6 +20,7 @@
         <module>SchedulingReconciler</module>
         <module>SlotReconciler</module>
         <module>Helm</module>
+        <module>integration-tests</module>
     </modules>
     <properties>
         <java.version>11</java.version>
@@ -45,6 +46,12 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+            <version>1.18.22</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok-mapstruct-binding</artifactId>
+            <version>0.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -170,6 +177,7 @@
                     </image>
                 </configuration>
             </plugin>
+
             <!--            <plugin>-->
             <!--                <groupId>org.springframework.experimental</groupId>-->
             <!--                <artifactId>spring-aot-maven-plugin</artifactId>-->

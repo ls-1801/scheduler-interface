@@ -4,10 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
-import org.apache.commons.lang3.tuple.Pair;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -18,7 +16,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_IS_GHOSTPOD_NAME;
 
 public class PodsPerNode {
     @Nonnull
@@ -52,18 +49,35 @@ public class PodsPerNode {
     }
 
     public PodsPerNode diff(@Nonnull PodsPerNode other) {
+        return diff(other, false);
+    }
+
+    /**
+     * The returned PodsPerNodes contains all Pods that are contained by this instance and not contained the other
+     * instance. Other Instance may also contain elements not present in this instance; these are simply ignored.
+     * Example:   {n1: [p1, p2], n2: [p3, p4]}.diff({n1: [p1], n2: [p3]})         -> {n1: [p2], n2: [p4]}
+     * But:       {n1: [p1], n2: [p3]}        .diff({n1: [p1, p2], n2: [p3, p4]}) -> {n1: [], n2: []}
+     * <p>
+     * The compareGhostPodFlag is used if two pods are not considered equal if one of them is a ghost pod while the
+     * other is not. Preemption needs to differentiate between ghost and non ghost pods.
+     */
+    private PodsPerNode diff(@Nonnull PodsPerNode other, boolean compareGhostPodFlag) {
 
         var diffMap = Sets.union(podsPerNodeMap.keySet(), other.podsPerNodeMap.keySet())
                           .stream()
                           .collect(ImmutableMap.toImmutableMap(Function.identity(), key -> {
                               var thisPodSet =
                                       this.podsPerNodeMap.getOrDefault(key, ImmutableList.of())
-                                                         .stream().map(ComparePodByNameWrapper::new)
+                                                         .stream()
+                                                         .map(pod -> new ComparePodByNameWrapper(pod,
+                                                                 compareGhostPodFlag))
                                                          .collect(ImmutableSet.toImmutableSet());
 
                               var otherPodSet =
                                       other.podsPerNodeMap.getOrDefault(key, ImmutableList.of())
-                                                          .stream().map(ComparePodByNameWrapper::new)
+                                                          .stream()
+                                                          .map(pod -> new ComparePodByNameWrapper(pod,
+                                                                  compareGhostPodFlag))
                                                           .collect(ImmutableSet.toImmutableSet());
 
                               return Sets.difference(thisPodSet, otherPodSet).stream()
@@ -109,20 +123,7 @@ public class PodsPerNode {
     }
 
     @Nonnull
-    public List<Pair<String, ? extends Pod>> getPodNodePairs() {
-        return this.podsPerNodeMap.entrySet().stream()
-                                  .flatMap(e -> e.getValue().stream().map(pod -> Pair.of(e.getKey(), pod)))
-                                  .collect(ImmutableList.toImmutableList());
-    }
-
-    @Nonnull
-    public List<? extends Pod> podsOnNode(@Nonnull Node node) {
-        var nodeName = node.getMetadata().getName();
-        return podsPerNodeMap.getOrDefault(nodeName, ImmutableList.of());
-    }
-
-    @Nonnull
-    public PodsPerNode preemptEmptySlots() {
+    public PodsPerNode getPreemptedSlots() {
         var preemptPodsMap =
                 podsPerNodeMap.entrySet().stream()
                               .collect(ImmutableMap.toImmutableMap(
@@ -137,19 +138,17 @@ public class PodsPerNode {
                                           return podByIdMap.values().stream()
                                                            .filter(list -> list.size() > 1)
                                                            .flatMap(Collection::stream)
-                                                           .filter(this::isGhostPod)
+                                                           .filter(ApplicationPodView::isGhostPod)
                                                            .collect(toImmutableList());
                                       }));
 
         return new PodsPerNode(preemptPodsMap);
     }
 
-    private boolean isGhostPod(Pod pod) {
-        var isGhostPod =
-                pod.getMetadata().getLabels()
-                   .getOrDefault(SLOT_POD_IS_GHOSTPOD_NAME, "false");
-
-        return Boolean.parseBoolean(isGhostPod);
+    @Nonnull
+    public PodsPerNode removePreemptedSlots(PodsPerNode other) {
+        return diff(other, true);
     }
+
 
 }

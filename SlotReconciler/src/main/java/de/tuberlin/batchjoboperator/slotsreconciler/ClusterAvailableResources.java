@@ -1,18 +1,20 @@
 package de.tuberlin.batchjoboperator.slotsreconciler;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.fabric8.kubernetes.api.model.Node;
 
 import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.util.Map;
+import java.util.Set;
 
 public class ClusterAvailableResources {
     Map<String, Map<String, BigDecimal>> clusterAvailableResources;
 
     public static ClusterAvailableResources diff(ClusterAllocatableResources allocatableResources,
-                                                 ClusterRequestResources requestResources) {
+                                                 ClusterRequestedResources requestResources) {
         if (!requestResources.requestedResourceMap.keySet()
                                                   .equals(allocatableResources.allocatableResourcesMap.keySet())) {
             throw new RuntimeException("Not Supported");
@@ -53,5 +55,23 @@ public class ClusterAvailableResources {
         }
 
         return nodesRequestedResources.getOrDefault(resourceName, BigDecimal.valueOf(0));
+    }
+
+    public Set<String> nodesWithEnoughResources(Map<String, BigDecimal> resource) {
+        return clusterAvailableResources.entrySet().stream()
+                                        .filter(nodesResources -> {
+                                            var resourceOnNode = nodesResources.getValue();
+                                            return resource.entrySet()
+                                                           .stream().allMatch(e -> {
+                                                        var key = e.getKey();
+                                                        var requested = e.getValue();
+                                                        var available =
+                                                                resourceOnNode.getOrDefault(key, BigDecimal.valueOf(0));
+                                                        return available.compareTo(requested) >= 0;
+                                                    });
+
+                                        })
+                                        .map(Map.Entry::getKey)
+                                        .collect(ImmutableSet.toImmutableSet());
     }
 }

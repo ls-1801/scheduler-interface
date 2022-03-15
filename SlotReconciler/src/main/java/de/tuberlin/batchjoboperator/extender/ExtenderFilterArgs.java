@@ -9,23 +9,23 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.Value;
 
-import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Value
 @RequiredArgsConstructor
 @ToString
-public class ExtenderArgs {
+public class ExtenderFilterArgs {
     @JsonProperty("Pod")
     Pod pod;
     @JsonProperty("Nodes")
     NodeList nodes;
 
     @JsonProperty("NodeNames")
-    List<String> nodeNames;
+    Set<String> nodeNames;
 
     public String toString() {
-        return "ExtenderPreemptionArgs(pod=" + ApplicationPodView.wrap(pod) + ", " +
+        return "ExtenderFilterArgs(pod=" + ApplicationPodView.wrap(pod) + ", " +
                 "nodes=" + this.getNodes().getItems().stream().map(ApplicationNodeView::wrap)
                                .collect(Collectors.toList()) + ", " +
                 "nodeNames" +

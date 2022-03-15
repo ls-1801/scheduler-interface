@@ -6,7 +6,7 @@ import lombok.Value;
 
 @Value
 @RequiredArgsConstructor
-class MetaPod {
+public class MetaPod {
     @JsonProperty("UID")
     String uid;
 }

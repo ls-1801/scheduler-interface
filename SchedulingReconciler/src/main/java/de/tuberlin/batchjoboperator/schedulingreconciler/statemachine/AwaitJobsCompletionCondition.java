@@ -5,6 +5,7 @@ import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.JobConditionValue;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
 
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
+@Slf4j
 public class AwaitJobsCompletionCondition extends SchedulingCondition {
 
     public static final String condition = AWAIT_COMPLETION_CONDITION;
@@ -28,9 +30,10 @@ public class AwaitJobsCompletionCondition extends SchedulingCondition {
 
     @Override
     protected boolean updateInternal(SchedulingContext context) {
-        var newJobs = context.getAllJobs();
+        var newJobs = context.getAlreadyScheduledJobs();
         Objects.requireNonNull(this.jobs)
-               .addAll(newJobs.stream().map(n -> new JobConditionValue(n, false)).collect(Collectors.toSet()));
+               .addAll(newJobs.stream().map(n -> new JobConditionValue(n, false))
+                              .collect(Collectors.toSet()));
 
 
         this.jobs = this.jobs.stream()
@@ -50,7 +53,8 @@ public class AwaitJobsCompletionCondition extends SchedulingCondition {
         }
 
         // Mark Jobs as completed
-        this.jobs.stream().filter(JobConditionValue::getValue).forEach(j -> context.jobCompletedEvent(j.getName()));
+        this.jobs.stream().filter(JobConditionValue::getValue)
+                 .forEach(j -> context.jobCompletedEvent(j.getName()));
 
         return this.jobs.stream()
                         .allMatch(JobConditionValue::getValue);
@@ -59,8 +63,8 @@ public class AwaitJobsCompletionCondition extends SchedulingCondition {
     @Nonnull
     private JobConditionValue isJobCompleted(SchedulingContext context, JobConditionValue p) {
         return new JobConditionValue(p.getName(), getNullSafe(() ->
-                context.getJob(p.getName()).getStatus()
-                       .getState() == BatchJobState.CompletedState).orElse(null));
+                context.getJob(p.getName()).getStatus().getState() == BatchJobState.CompletedState)
+                .orElse(null));
     }
 
 

@@ -15,11 +15,11 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
-public class ClusterRequestResources {
+public class ClusterRequestedResources {
 
     Map<String, Map<String, BigDecimal>> requestedResourceMap;
 
-    private static Map<String, BigDecimal> quantityToBytes(Map<String, Quantity> quantities) {
+    public static Map<String, BigDecimal> quantityToBytes(Map<String, Quantity> quantities) {
         return quantities.entrySet().stream().collect(
                 toMap(
                         Map.Entry::getKey,
@@ -27,7 +27,7 @@ public class ClusterRequestResources {
         );
     }
 
-    private static Map<String, BigDecimal> aggregateRequestedResourcesPerNode(List<Pod> pods) {
+    public static Map<String, BigDecimal> aggregateRequestedResourcesPerNode(List<Pod> pods) {
         return pods.stream()
                    // Requested Resources on Container Level not Pods
                    .flatMap(podsPerNode -> podsPerNode.getSpec()
@@ -38,7 +38,7 @@ public class ClusterRequestResources {
                                                             .getRequests())
                    // Some might be null
                    .filter(Objects::nonNull)
-                   .map(ClusterRequestResources::quantityToBytes)
+                   .map(ClusterRequestedResources::quantityToBytes)
                    // Reduce Stream of RequestedResources to a single map summing over each requested Resource
                    // Quantities
                    .reduce(new HashMap<>(), (map, resourcePerNode) -> {
@@ -51,7 +51,7 @@ public class ClusterRequestResources {
                    });
     }
 
-    public static ClusterRequestResources aggregate(List<Pod> pods) {
+    public static ClusterRequestedResources aggregate(List<Pod> pods) {
         var map = pods
                 .stream()
                 // Ignore non-scheduled pods
@@ -69,7 +69,7 @@ public class ClusterRequestResources {
                         )
                 );
 
-        var instance = new ClusterRequestResources();
+        var instance = new ClusterRequestedResources();
         instance.requestedResourceMap = map;
 
         return instance;

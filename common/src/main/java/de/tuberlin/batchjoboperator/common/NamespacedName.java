@@ -21,4 +21,12 @@ public class NamespacedName {
     public static NamespacedName of(HasMetadata meta) {
         return new NamespacedName(meta.getMetadata().getName(), meta.getMetadata().getNamespace());
     }
+
+    public static String getNamespace(HasMetadata meta) {
+        return of(meta).getNamespace();
+    }
+
+    public static String getName(HasMetadata meta) {
+        return of(meta).getName();
+    }
 }

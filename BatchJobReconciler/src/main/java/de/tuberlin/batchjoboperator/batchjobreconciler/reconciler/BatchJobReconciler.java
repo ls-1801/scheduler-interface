@@ -1,6 +1,7 @@
 package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler;
 
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.AwaitCreationRequest;
+import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.AwaitEnqueueRequest;
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.AwaitReleaseCondition;
 import de.tuberlin.batchjoboperator.common.Action;
 import de.tuberlin.batchjoboperator.common.Condition;
@@ -30,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -39,7 +39,9 @@ import static de.tuberlin.batchjoboperator.common.Action.getConditions;
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_VALUE;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
-import static org.springframework.util.CollectionUtils.firstElement;
+import static de.tuberlin.batchjoboperator.common.util.General.requireFirstElement;
+import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.BooleanUtils.isNotFalse;
 
 /**
  * A very simple sample controller that creates a service with a label.
@@ -54,7 +56,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
 
     public static void releaseRequest(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
         log.info("release requested");
-        var releaseCondition = firstElement(getConditions(conditions, AwaitReleaseCondition.class));
+        var releaseCondition = requireFirstElement(getConditions(conditions, AwaitReleaseCondition.class));
         context.removeApplication(releaseCondition.getName());
     }
 
@@ -69,9 +71,15 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
     }
 
     public static void creationRequest(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
-        var creationRequestCondition = firstElement(getConditions(conditions, AwaitCreationRequest.class));
-        log.info("Creation Request: {}", creationRequestCondition.getCreationRequest());
-        context.createApplication(Objects.requireNonNull(creationRequestCondition.getCreationRequest()));
+        var creationRequestCondition = requireFirstElement(getConditions(conditions, AwaitCreationRequest.class));
+        var creationRequest = requireNonNull(creationRequestCondition.getCreationRequest());
+        log.info("Creation Request: {}", creationRequest);
+        context.createApplication(creationRequestCondition.getCreationRequest());
+
+        var status = context.getResource().getStatus();
+        status.setSlots(creationRequest.getSlotsName());
+        status.setSlotIds(creationRequest.getSlotIds());
+        status.setReplication(creationRequest.getReplication());
     }
 
     @Override
@@ -100,14 +108,20 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
         return Reconciler.super.cleanup(resource, context);
     }
 
+    public static void enqueueRequest(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
+        var condition = requireFirstElement(Action.getConditions(conditions, AwaitEnqueueRequest.class));
+        context.getResource().getStatus().setActiveScheduling(condition.getActiveScheduling());
+    }
+
     private void debugLog(BatchJob resource, Context context) {
-        log.debug("#".repeat(80));
+        log.debug("#" .repeat(80));
         log.debug("Reconciling BatchJob: {}", resource.getMetadata().getName());
         log.debug("RV:         {}", resource.getMetadata().getResourceVersion());
         log.debug("LABELS:     {}", resource.getMetadata().getLabels());
         log.debug("Status:     {}", resource.getStatus().getState());
         log.debug("Conditions: {}",
-                getNullSafe(() -> resource.getStatus().getConditions().stream().map(c -> c.getCondition())
+                getNullSafe(() -> resource.getStatus().getConditions().stream()
+                                          .map(AbstractBatchJobCondition::getCondition)
                                           .collect(Collectors.toSet())));
 
         log.debug("RetryCount/LastAttempt: {}", context.getRetryInfo()
@@ -127,13 +141,13 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
 
         log.error("StateMachine encountered an error:\n{}\n", newStatus.getError());
 
-        if (lastAttempt) {
+        if (isNotFalse(lastAttempt)) {
             resource.getStatus().setConditions(newStatus.getNewConditions().stream()
-                                                        .map(a -> (AbstractBatchJobCondition) a)
+                                                        .map(AbstractBatchJobCondition.class::cast)
                                                         .collect(Collectors.toSet()));
             resource.getStatus().setState(BatchJobState.valueOf(newStatus.getNewState()));
             log.debug("Last Retry Attempt updating state to FailedState");
-            log.debug("#".repeat(80));
+            log.debug("#" .repeat(80));
             return UpdateControl.updateStatus(resource);
         }
 
@@ -171,17 +185,17 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
 
         // Update State and Conditions
         resource.getStatus().setConditions(newStatus.getNewConditions().stream()
-                                                    .map(a -> (AbstractBatchJobCondition) a)
+                                                    .map(AbstractBatchJobCondition.class::cast)
                                                     .collect(Collectors.toSet()));
         resource.getStatus().setState(BatchJobState.valueOf(newStatus.getNewState()));
 
         log.debug("StateMachine did advance to");
         log.debug("New State: {}", newStatus.getNewState());
-        log.debug("New Conditions: {}", resource.getStatus().getConditions().stream().map(c -> c.getCondition())
+        log.debug("New Conditions: {}", resource.getStatus().getConditions().stream().
+                                                map(AbstractBatchJobCondition::getCondition)
                                                 .collect(Collectors.toSet()));
-        log.debug("#".repeat(80));
+        log.debug("#" .repeat(80));
 
         return UpdateControl.updateStatus(resource);
     }
-
 }
