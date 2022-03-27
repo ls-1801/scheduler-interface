@@ -1,4 +1,4 @@
-package de.tuberlin.batchjoboperator.batchjobreconciler;
+package de.tuberlin.batchjoboperator.common.reconcilers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
