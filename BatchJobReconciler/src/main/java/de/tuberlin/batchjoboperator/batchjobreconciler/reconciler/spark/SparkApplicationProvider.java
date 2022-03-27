@@ -37,13 +37,19 @@ public class SparkApplicationProvider implements ApplicationSpecific {
     private List<Pod> pods = null;
     private SparkApplication cache = null;
 
+    private boolean stateInSet(Set<String> set) {
+        return getNullSafe(() -> getApplication().getStatus().getApplicationState().getState().getState())
+                .map(set::contains)
+                .orElse(false);
+    }
+
     @Override
     public boolean isCompleted() {
         if (!isExisting()) {
             return false;
         }
 
-        return completedState.contains(getApplication().getStatus().getApplicationState().getState().getState());
+        return stateInSet(completedState);
     }
 
     @Override
@@ -52,13 +58,11 @@ public class SparkApplicationProvider implements ApplicationSpecific {
             return false;
         }
 
-        var applicationRunning =
-                runningState.contains(getApplication().getStatus().getApplicationState().getState().getState());
+        var applicationRunning = stateInSet(runningState);
 
 
         var allExecutorsRunning = getNullSafe(() -> getApplication().getStatus().getExecutorState().values().stream()
                                                                     .allMatch(runningState::contains)).orElse(false);
-
         return applicationRunning && allExecutorsRunning;
     }
 
@@ -97,7 +101,10 @@ public class SparkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isFailed() {
-        return failedState.contains(getApplication().getStatus().getApplicationState().getState());
+        if (!isExisting())
+            return false;
+
+        return stateInSet(failedState);
     }
 
     @Override

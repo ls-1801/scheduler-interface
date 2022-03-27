@@ -3,6 +3,7 @@ package de.tuberlin.batchjoboperator.batchjobreconciler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.BatchJobReconciler;
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.BatchJobConditionDeserializer;
+import de.tuberlin.batchjoboperator.common.reconcilers.CustomClonerConfigurationService;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.utils.Serialization;
@@ -23,7 +24,7 @@ public class Config {
 
     @Bean
     public BatchJobReconciler batchJobReconciler(KubernetesClient client) {
-        return new BatchJobReconciler(client);
+        return new BatchJobReconciler(client, namespace);
     }
 
     @Bean

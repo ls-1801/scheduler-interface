@@ -1,0 +1,19 @@
+apiVersion: batchjob.gcr.io/v1alpha1
+kind: BatchJob
+metadata:
+  name: batchjob-flink
+  namespace: default
+spec:
+  externalScheduler:
+    profiler:
+      - batchjob-flink2: 24 (16)
+        batchjob-flink3: 23 (16)
+        batchjob-sample: 27 (16)
+        batchjob-sample3: 27 (8)
+        spark-crawler: 34 (8)
+  flinkSpec:
+    args:
+      - --input
+      - ./README.txt
+    className: org.apache.flink.streaming.examples.wordcount.WordCount
+    jarFile: ./examples/streaming/WordCount.jar

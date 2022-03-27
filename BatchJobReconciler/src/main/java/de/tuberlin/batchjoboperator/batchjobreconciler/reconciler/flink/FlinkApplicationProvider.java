@@ -10,13 +10,19 @@ import lombok.RequiredArgsConstructor;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
+
+import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
 @RequiredArgsConstructor
 public class FlinkApplicationProvider implements ApplicationSpecific {
     private final KubernetesClient client;
     private final NamespacedName name;
+    private final Set<String> failedStates =
+            Set.of(
+                    "Failed"
+            );
+
     private final Set<String> runningStates =
             Set.of(
                     "Running"
@@ -27,6 +33,12 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
             );
     private FlinkCluster cache = null;
     private List<Pod> pods = null;
+
+    private boolean stateInSet(Set<String> set) {
+        return getNullSafe(() -> getApplication().getStatus().getState())
+                .map(set::contains)
+                .orElse(false);
+    }
 
     @Override
     public FlinkCluster getApplication() {
@@ -49,7 +61,7 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
         if (!isExisting())
             return false;
 
-        return completedStates.contains(getApplication().getStatus().getState());
+        return stateInSet(completedStates);
 
     }
 
@@ -58,7 +70,7 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
         if (!isExisting())
             return false;
 
-        return runningStates.contains(getApplication().getStatus().getState());
+        return stateInSet(runningStates);
     }
 
     @Override
@@ -91,6 +103,12 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isFailed() {
-        return Objects.equals(getApplication().getStatus().getState(), "Failed");
+        if (!isExisting())
+            return false;
+
+        if (getApplication().getStatus() == null)
+            return false;
+
+        return stateInSet(failedStates);
     }
 }

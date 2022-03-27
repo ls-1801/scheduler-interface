@@ -14,16 +14,12 @@
     <name>BatchJobReconciler</name>
     <description>BatchJobReconciler</description>
 
+
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>spring-boot-plugin</id>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>

@@ -52,7 +52,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
     private final KubernetesClient kubernetesClient;
 
     @Value("${NAMESPACE:default}")
-    private String namespace;
+    private final String namespace;
 
     public static void releaseRequest(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
         log.info("release requested");
