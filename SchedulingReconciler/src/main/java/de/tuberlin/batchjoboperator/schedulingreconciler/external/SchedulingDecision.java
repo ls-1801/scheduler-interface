@@ -2,7 +2,7 @@ package de.tuberlin.batchjoboperator.schedulingreconciler.external;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import lombok.Data;
 
 import java.util.List;

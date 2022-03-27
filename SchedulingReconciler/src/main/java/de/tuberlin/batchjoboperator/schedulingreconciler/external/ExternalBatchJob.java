@@ -3,13 +3,13 @@ package de.tuberlin.batchjoboperator.schedulingreconciler.external;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.ScheduledEvents;
 import lombok.Builder;
-import lombok.Value;
+import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
 
 import java.util.List;
 import java.util.Map;
 
-@Value
+@Data
 @Builder
 @Jacksonized
 public class ExternalBatchJob {

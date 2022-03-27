@@ -13,7 +13,11 @@ spec:
     singular: scheduling
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - additionalPrinterColumns:
+        - jsonPath: .status.state
+          name: status
+          type: string
+      name: v1alpha1
       schema:
         openAPIV3Schema:
           properties:
@@ -32,9 +36,8 @@ spec:
                   properties:
                     mode:
                       enum:
-                        - STRICT
-                        - RELAXED
-                        - mode
+                        - strict
+                        - relaxed
                       type: string
                     jobs:
                       items:

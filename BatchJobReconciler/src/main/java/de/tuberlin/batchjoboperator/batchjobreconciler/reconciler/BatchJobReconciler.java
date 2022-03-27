@@ -2,13 +2,12 @@ package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler;
 
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.AwaitCreationRequest;
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.AwaitEnqueueRequest;
-import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.AwaitReleaseCondition;
-import de.tuberlin.batchjoboperator.common.Action;
-import de.tuberlin.batchjoboperator.common.Condition;
-import de.tuberlin.batchjoboperator.common.UpdateResult;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.AbstractBatchJobCondition;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
+import de.tuberlin.batchjoboperator.common.statemachine.Action;
+import de.tuberlin.batchjoboperator.common.statemachine.Condition;
+import de.tuberlin.batchjoboperator.common.statemachine.UpdateResult;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
@@ -28,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
@@ -35,18 +35,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.BatchJobStateMachine.STATE_MACHINE;
-import static de.tuberlin.batchjoboperator.common.Action.getConditions;
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_VALUE;
+import static de.tuberlin.batchjoboperator.common.statemachine.Action.getConditions;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 import static de.tuberlin.batchjoboperator.common.util.General.requireFirstElement;
 import static java.util.Objects.requireNonNull;
-import static org.apache.commons.lang3.BooleanUtils.isNotFalse;
+import static org.apache.commons.lang3.BooleanUtils.isFalse;
 
-/**
- * A very simple sample controller that creates a service with a label.
- */
-@ControllerConfiguration(generationAwareEventProcessing = false)
+@ControllerConfiguration
 @RequiredArgsConstructor
 public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInitializer<BatchJob> {
 
@@ -54,14 +51,17 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
 
     private final KubernetesClient kubernetesClient;
 
+    @Value("${NAMESPACE:default}")
+    private String namespace;
+
     public static void releaseRequest(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
         log.info("release requested");
-        var releaseCondition = requireFirstElement(getConditions(conditions, AwaitReleaseCondition.class));
-        context.removeApplication(releaseCondition.getName());
+        context.removeApplication();
+        context.getResource().getStatus().setActiveScheduling(null);
     }
 
     public static void startRunningEvent(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
-        context.getResource().getStatus().startSchedulingEvent(context.getResource().getMetadata());
+        context.getResource().getStatus().startSchedulingEvent(context.getResource());
     }
 
     public static Action<BatchJobContext> stopRunningEvent(boolean succesful) {
@@ -73,7 +73,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
     public static void creationRequest(Set<Condition<BatchJobContext>> conditions, BatchJobContext context) {
         var creationRequestCondition = requireFirstElement(getConditions(conditions, AwaitCreationRequest.class));
         var creationRequest = requireNonNull(creationRequestCondition.getCreationRequest());
-        log.info("Creation Request: {}", creationRequest);
+        log.debug("Creation Request: {}", creationRequest);
         context.createApplication(creationRequestCondition.getCreationRequest());
 
         var status = context.getResource().getStatus();
@@ -84,14 +84,15 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
 
     @Override
     public List<EventSource> prepareEventSources(EventSourceContext<BatchJob> context) {
+        log.info("Watching to Spark and Flink Applications in namespace: {}", namespace);
         SharedIndexInformer<SparkApplication> sparkApplicationSharedIndexInformer =
                 kubernetesClient.resources(SparkApplication.class)
-                                .inAnyNamespace()
+                                .inNamespace(namespace)
                                 .withLabel(MANAGED_BY_LABEL_NAME, MANAGED_BY_LABEL_VALUE)
                                 .runnableInformer(0);
         SharedIndexInformer<FlinkCluster> flinkApplicationSharedIndexInformer =
                 kubernetesClient.resources(FlinkCluster.class)
-                                .inAnyNamespace()
+                                .inNamespace(namespace)
                                 .withLabel(MANAGED_BY_LABEL_NAME, MANAGED_BY_LABEL_VALUE)
                                 .runnableInformer(0);
 
@@ -114,7 +115,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
     }
 
     private void debugLog(BatchJob resource, Context context) {
-        log.debug("#" .repeat(80));
+        log.debug("#".repeat(80));
         log.debug("Reconciling BatchJob: {}", resource.getMetadata().getName());
         log.debug("RV:         {}", resource.getMetadata().getResourceVersion());
         log.debug("LABELS:     {}", resource.getMetadata().getLabels());
@@ -141,20 +142,21 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
 
         log.error("StateMachine encountered an error:\n{}\n", newStatus.getError());
 
-        if (isNotFalse(lastAttempt)) {
-            resource.getStatus().setConditions(newStatus.getNewConditions().stream()
-                                                        .map(AbstractBatchJobCondition.class::cast)
-                                                        .collect(Collectors.toSet()));
-            resource.getStatus().setState(BatchJobState.valueOf(newStatus.getNewState()));
-            log.debug("Last Retry Attempt updating state to FailedState");
-            log.debug("#" .repeat(80));
-            return UpdateControl.updateStatus(resource);
+        if (isFalse(lastAttempt)) {
+            // Retry is triggered by throwing an exception during reconciliation
+            log.debug("Retry is triggered");
+            log.debug("#".repeat(80));
+            throw new RuntimeException(newStatus.getError());
         }
 
-        // Retry is triggered by throwing an exception during reconciliation
-        log.debug("Retry is triggered");
+        resource.getStatus().setConditions(newStatus.getNewConditions().stream()
+                                                    .map(AbstractBatchJobCondition.class::cast)
+                                                    .collect(Collectors.toSet()));
+        resource.getStatus().setState(BatchJobState.valueOf(newStatus.getNewState()));
+        resource.getStatus().setProblems(List.of(newStatus.getError()));
+        log.debug("Last Retry Attempt updating state to FailedState");
         log.debug("#".repeat(80));
-        throw new RuntimeException(newStatus.getError());
+        return UpdateControl.updateStatus(resource);
     }
 
     @Override
@@ -194,7 +196,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
         log.debug("New Conditions: {}", resource.getStatus().getConditions().stream().
                                                 map(AbstractBatchJobCondition::getCondition)
                                                 .collect(Collectors.toSet()));
-        log.debug("#" .repeat(80));
+        log.debug("#".repeat(80));
 
         return UpdateControl.updateStatus(resource);
     }

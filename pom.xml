@@ -18,15 +18,17 @@
         <module>common</module>
         <module>BatchJobReconciler</module>
         <module>SchedulingReconciler</module>
-        <module>SlotReconciler</module>
+        <module>TestbedReconciler</module>
         <module>Helm</module>
-        <module>integration-tests</module>
+        <module>ExampleScheduler</module>
     </modules>
     <properties>
         <java.version>11</java.version>
-        <repackage.classifier/>
         <spring-native.version>0.11.2</spring-native.version>
         <fabric8-client.version>5.12.0</fabric8-client.version>
+        <jib-maven-plugin.version>3.2.0</jib-maven-plugin.version>
+        <build.image.registry>gcr.io/spark-on-kubernetes-316714</build.image.registry>
+        <org.mapstruct.version>1.4.2.Final</org.mapstruct.version>
     </properties>
     <dependencies>
 
@@ -101,104 +103,6 @@
 
     </dependencies>
 
-    <build>
-
-        <plugins>
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <groupId>org.apache.maven.plugins</groupId>
-                <version>3.2.0</version>
-                <executions>
-                    <execution>
-                        <id>copy-resources</id>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>target/classes/META-INF/fabric8/kubernetes</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>target/classes/META-INF/fabric8</directory>
-                                    <includes>
-                                        <include>batchjobs.batchjob.gcr.io-v1.yml</include>
-                                        <include>slots.batchjob.gcr.io-v1.yml</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>io.fabric8</groupId>
-                <artifactId>fabric8-maven-plugin</artifactId>
-                <version>4.4.1</version>
-                <configuration>
-                    <images>
-                        <image>
-                            <name>gcr.io/spark-on-kubernetes-316714/java-batchjob-operator</name>
-                            <registry>gcr.io/spark-on-kubernetes-316714</registry>
-                            <build></build>
-                        </image>
-                    </images>
-                </configuration>
-                <!-- Connect fabric8:resource, fabric8:build and fabric8:helm to lifecycle phases -->
-                <executions>
-                    <execution>
-                        <id>fabric8</id>
-                        <goals>
-                            <goal>resource</goal>
-                            <goal>build</goal>
-                            <!--                            <goal>push</goal>-->
-                            <goal>helm</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                    <classifier>${repackage.classifier}</classifier>
-                    <image>
-                        <builder>paketobuildpacks/builder:tiny</builder>
-                        <env>
-                            <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
-                        </env>
-                    </image>
-                </configuration>
-            </plugin>
-
-            <!--            <plugin>-->
-            <!--                <groupId>org.springframework.experimental</groupId>-->
-            <!--                <artifactId>spring-aot-maven-plugin</artifactId>-->
-            <!--                <version>${spring-native.version}</version>-->
-            <!--                <executions>-->
-            <!--                    <execution>-->
-            <!--                        <id>test-generate</id>-->
-            <!--                        <goals>-->
-            <!--                            <goal>test-generate</goal>-->
-            <!--                        </goals>-->
-            <!--                    </execution>-->
-            <!--                    <execution>-->
-            <!--                        <id>generate</id>-->
-            <!--                        <goals>-->
-            <!--                            <goal>generate</goal>-->
-            <!--                        </goals>-->
-            <!--                    </execution>-->
-            <!--                </executions>-->
-            <!--            </plugin>-->
-        </plugins>
-    </build>
     <repositories>
         <repository>
             <id>spring-releases</id>
@@ -232,6 +136,28 @@
                 </dependency>
             </dependencies>
         </profile>
+
+        <profile>
+            <id>integration-tests</id>
+            <modules>
+                <module>integration-tests</module>
+            </modules>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>spring-boot-plugin</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <profile>
             <id>native</id>
             <properties>

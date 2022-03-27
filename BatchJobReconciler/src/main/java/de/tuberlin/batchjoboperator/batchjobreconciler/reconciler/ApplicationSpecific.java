@@ -17,4 +17,6 @@ public interface ApplicationSpecific {
     void delete();
 
     <T extends HasMetadata> T getApplication();
+
+    boolean isFailed();
 }

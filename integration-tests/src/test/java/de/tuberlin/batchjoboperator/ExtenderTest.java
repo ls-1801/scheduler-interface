@@ -1,17 +1,15 @@
 package de.tuberlin.batchjoboperator;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
-import de.tuberlin.batchjoboperator.common.crd.slots.SlotIDsAnnotationString;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotSpec;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotStatus;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotsStatusState;
 import de.tuberlin.batchjoboperator.extender.ExtenderController;
-import de.tuberlin.batchjoboperator.slotsreconciler.ApplicationPodView;
-import de.tuberlin.batchjoboperator.slotsreconciler.SlotReconciler;
-import io.fabric8.kubernetes.api.model.NodeSelectorRequirement;
-import io.fabric8.kubernetes.api.model.NodeSelectorTermBuilder;
+import de.tuberlin.batchjoboperator.testbedreconciler.ApplicationPodView;
+import de.tuberlin.batchjoboperator.testbedreconciler.TestbedReconciler;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
 import org.junit.After;
 import org.junit.Before;
@@ -22,14 +20,10 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.function.Supplier;
 
-import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_IDS_NAME;
-import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_IS_GHOSTPOD_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_LABEL_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -57,8 +51,8 @@ public class ExtenderTest extends BaseReconcilerTest {
 
     @Nonnull
     @Override
-    protected List<Reconciler> createReconcilers() {
-        return Collections.singletonList(new SlotReconciler(client));
+    protected List<Reconciler> createReconcilers(Supplier<KubernetesClient> clientSupplier) {
+        return Collections.singletonList(new TestbedReconciler(clientSupplier.get()));
     }
 
     @Override
@@ -111,7 +105,13 @@ public class ExtenderTest extends BaseReconcilerTest {
                 Map.of("cpu", new Quantity("400m"), "memory", new Quantity("300M"))
         );
 
-        createPodInSlots(1, TEST_SLOT_NAME_1, "Executor-", TEST_NODE_LABEL_1, "500m");
+        createPodInSlots(PodInSlotsConfiguration.builder()
+                                                .replication(1)
+                                                .slotName(TEST_SLOT_NAME_1)
+                                                .prefix("Executor-")
+                                                .labelName(TEST_NODE_LABEL_1)
+                                                .cpu("500m")
+                                                .build());
 
 
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -131,7 +131,7 @@ public class ExtenderTest extends BaseReconcilerTest {
                     client.pods().inNamespace(NAMESPACE).withLabel(SLOT_POD_LABEL_NAME, TEST_SLOT_NAME_1).list();
 
             assertThat(updatedPodList.getItems().stream()
-                                     .filter(p -> "Executor-0" .equals(ApplicationPodView.wrap(p).getName()))
+                                     .filter(p -> "Executor-0".equals(ApplicationPodView.wrap(p).getName()))
                                      .filter(p -> !ApplicationPodView.wrap(p).isGhostPod()))
                     .hasSize(1);
 
@@ -147,27 +147,25 @@ public class ExtenderTest extends BaseReconcilerTest {
     @Test
     public void testFilterWithMultipleSlots() {
         var slotClient = client.resources(Slot.class);
-        slotClient.inNamespace(NAMESPACE).create(createSlot(TEST_SLOT_NAME_1, SlotSpec.builder()
-                                                                                      .nodeLabel(TEST_NODE_LABEL_1)
-                                                                                      .slotsPerNode(3)
-                                                                                      .resourcesPerSlot(Map.of(
-                                                                                              "cpu", new Quantity(
-                                                                                                      "500m"),
-                                                                                              "memory", new Quantity(
-                                                                                                      "300M")
-                                                                                      ))
-                                                                                      .build(), null));
+        slotClient.inNamespace(NAMESPACE).create(
+                createSlot(TEST_SLOT_NAME_1, SlotSpec.builder()
+                                                     .nodeLabel(TEST_NODE_LABEL_1)
+                                                     .slotsPerNode(3)
+                                                     .resourcesPerSlot(Map.of(
+                                                             "cpu", new Quantity("500m"),
+                                                             "memory", new Quantity("300M")
+                                                     ))
+                                                     .build(), null));
 
-        slotClient.inNamespace(NAMESPACE).create(createSlot(TEST_SLOT_NAME_2, SlotSpec.builder()
-                                                                                      .nodeLabel(TEST_NODE_LABEL_2)
-                                                                                      .slotsPerNode(2)
-                                                                                      .resourcesPerSlot(Map.of(
-                                                                                              "cpu", new Quantity(
-                                                                                                      "1000m"),
-                                                                                              "memory", new Quantity(
-                                                                                                      "300M")
-                                                                                      ))
-                                                                                      .build(), null));
+        slotClient.inNamespace(NAMESPACE).create(
+                createSlot(TEST_SLOT_NAME_2, SlotSpec.builder()
+                                                     .nodeLabel(TEST_NODE_LABEL_2)
+                                                     .slotsPerNode(2)
+                                                     .resourcesPerSlot(Map.of(
+                                                             "cpu", new Quantity("1000m"),
+                                                             "memory", new Quantity("300M")
+                                                     ))
+                                                     .build(), null));
 
 
         addLabelToNode(TEST_NODE_NAMES[0], TEST_NODE_LABEL_1, "0");
@@ -199,8 +197,21 @@ public class ExtenderTest extends BaseReconcilerTest {
                 Map.of("cpu", new Quantity("400m"), "memory", new Quantity("300M"))
         );
 
-        createPodInSlots(1, TEST_SLOT_NAME_1, "Executor-", TEST_NODE_LABEL_1, "500m");
-        createPodInSlots(2, TEST_SLOT_NAME_2, "Profiler-", TEST_NODE_LABEL_2, "1000m");
+        createPodInSlots(PodInSlotsConfiguration.builder()
+                                                .replication(1)
+                                                .slotName(TEST_SLOT_NAME_1)
+                                                .prefix("Executor-")
+                                                .labelName(TEST_NODE_LABEL_1)
+                                                .cpu("500m")
+                                                .build());
+
+        createPodInSlots(PodInSlotsConfiguration.builder()
+                                                .replication(2)
+                                                .slotName(TEST_SLOT_NAME_2)
+                                                .prefix("Profiler-")
+                                                .labelName(TEST_NODE_LABEL_2)
+                                                .cpu("1000m")
+                                                .build());
 
 
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -260,39 +271,4 @@ public class ExtenderTest extends BaseReconcilerTest {
         });
     }
 
-
-    void createPodInSlots(Set<Integer> slotIds, List<String> nodeLabelValues, String slotName, String prefix,
-                          String labelName, String cpu) {
-        for (int i = 0; i < slotIds.size(); i++) {
-            createPod(new NamespacedName(prefix + i, NAMESPACE),
-                    Map.of(
-                            SLOT_POD_LABEL_NAME, slotName,
-                            SLOT_POD_IS_GHOSTPOD_NAME, "false",
-                            SLOT_IDS_NAME, SlotIDsAnnotationString.ofIds(slotIds).toString()),
-                    null,
-                    Map.of("cpu", new Quantity(cpu), "memory", new Quantity("300M")),
-                    List.of(
-                            new NodeSelectorTermBuilder()
-                                    .withMatchExpressions(new NodeSelectorRequirement(
-                                            labelName,
-                                            "In",
-                                            nodeLabelValues))
-                                    .build()
-
-                    )
-            );
-        }
-    }
-
-
-    void createPodInSlots(Set<Integer> slotIds, String slotsName, String prefix, String labelName, String cpu) {
-        var labelValues = slotIds.stream().map(i -> i % TEST_NODE_NAMES.length).map(String::valueOf)
-                                 .distinct().collect(Collectors.toList());
-        createPodInSlots(slotIds, labelValues, slotsName, prefix, labelName, cpu);
-    }
-
-    void createPodInSlots(int replication, String slotsName, String prefix, String labelName, String cpu) {
-        var slotIds = IntStream.range(0, replication).boxed().collect(Collectors.toSet());
-        createPodInSlots(slotIds, slotsName, prefix, labelName, cpu);
-    }
 }

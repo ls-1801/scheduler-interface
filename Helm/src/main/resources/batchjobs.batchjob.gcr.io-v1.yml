@@ -13,17 +13,18 @@ spec:
     singular: batchjob
   scope: Namespaced
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          properties:
-            spec:
-              properties:
-                sparkSpec:
-                  properties:
-                    arguments:
-                      items:
-                        type: string
+
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              sparkSpec:
+                properties:
+                  arguments:
+                    items:
+                      type: string
                       type: array
                     batchScheduler:
                       type: string
@@ -5101,11 +5102,6 @@ spec:
                   x-kubernetes-preserve-unknown-fields: true
                   type: object
               type: object
-              oneOf:
-                - properties:
-                    sparkSpec: { }
-                - properties:
-                    flinkSpec: { }
             status:
               properties:
                 state:

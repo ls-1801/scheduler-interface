@@ -1,7 +1,7 @@
 package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions;
 
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.BatchJobContext;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import io.fabric8.kubernetes.api.model.Pod;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,6 +23,10 @@ public class AwaitPodScheduledCondition extends BatchJobCondition {
 
     @Override
     protected boolean updateInternal(BatchJobContext context) {
+        if (context.getApplication().isFailed()) {
+            return error("Application has failed");
+        }
+
         return getNullSafe(() ->
                 context.getApplication().isExisting() &&
                         !context.getApplication().getPods().isEmpty() &&

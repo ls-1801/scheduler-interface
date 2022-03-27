@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.AbstractBatchJobCondition;
 import org.springframework.lang.Nullable;
 

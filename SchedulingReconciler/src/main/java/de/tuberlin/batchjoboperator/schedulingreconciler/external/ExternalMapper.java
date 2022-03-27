@@ -1,25 +1,31 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.external;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.Scheduling;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SlotScheduling;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SlotSchedulingItem;
-import org.mapstruct.AfterMapping;
+import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
+import de.tuberlin.batchjoboperator.common.crd.slots.SlotOccupationStatus;
 import org.mapstruct.Context;
 import org.mapstruct.InheritInverseConfiguration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Mapper
 public interface ExternalMapper {
 
+
+    @Mapping(source = "metadata.name", target = "name")
+    @Mapping(source = "status.slots", target = "slotsByNode")
+    @Mapping(source = "status.state", target = "state")
+    ExternalTestbed toExternal(Slot internal);
 
     @Mapping(source = "metadata.name", target = "name")
     @Mapping(source = "status.state", target = "state")
@@ -34,18 +40,13 @@ public interface ExternalMapper {
     @Mapping(source = "spec.queueBased", target = "queue")
     @Mapping(source = "status.jobStates", target = "jobStatus")
     @Mapping(source = "metadata.name", target = "name")
+    @Mapping(source = "spec.slots", target = "testBed")
+    @Mapping(source = "status.state", target = "state")
     ExternalScheduling toExternal(Scheduling internal);
 
     @InheritInverseConfiguration
     @Mapping(target = "status", ignore = true)
-    @Mapping(target = "spec.slots", ignore = true)
-    Scheduling toInternal(ExternalScheduling external, @Context NamespacedName slots, @Context String namespace);
-
-    @AfterMapping
-    default void calledWithSourceAndTarget(ExternalScheduling external, @MappingTarget Scheduling internal,
-                                           @Context NamespacedName slots, @Context String namespace) {
-        internal.getSpec().setSlots(slots);
-    }
+    Scheduling toInternal(ExternalScheduling external, @Context String namespace);
 
     @Mapping(source = "jobs", target = "jobs")
     @Mapping(source = "mode", target = "mode")
@@ -79,5 +80,13 @@ public interface ExternalMapper {
 
     default Set<SchedulingJobState> map(ExternalBatchJobSchedulingStatusWithoutDuplicates value) {
         return Collections.emptySet();
+    }
+
+
+    default Map<String, Set<SlotOccupationStatus>> mapSlotStatus(Set<SlotOccupationStatus> slotOccupationStatuses) {
+        return slotOccupationStatuses.stream().collect(Collectors.groupingBy(
+                slotOccupationStatus -> slotOccupationStatus.getNodeName(),
+                Collectors.toSet()
+        ));
     }
 }

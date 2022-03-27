@@ -1,10 +1,10 @@
 package de.tuberlin.batchjoboperator.common.crd.batchjob;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import lombok.Data;
 
 import javax.annotation.Nullable;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 public class ScheduledEvents {
@@ -17,14 +17,14 @@ public class ScheduledEvents {
 
     public static ScheduledEvents startEvent(@Nullable NamespacedName scheduling) {
         ScheduledEvents scheduledEvents = new ScheduledEvents();
-        scheduledEvents.setStart(LocalDateTime.now().toString());
+        scheduledEvents.setStart(Instant.now().toString());
         scheduledEvents.setScheduling(scheduling);
         return scheduledEvents;
     }
 
 
     public ScheduledEvents stopEvent(boolean successful) {
-        this.setStop(LocalDateTime.now().toString());
+        this.setStop(Instant.now().toString());
         this.setSuccessful(successful);
         return this;
     }

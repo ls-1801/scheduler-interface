@@ -1,11 +1,11 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.strategy;
 
-import de.tuberlin.batchjoboperator.common.Condition;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SlotScheduling;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SlotSchedulingItem;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SlotSchedulingMode;
+import de.tuberlin.batchjoboperator.common.statemachine.Condition;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.AwaitSlotsAvailableCondition;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingContext;
 import lombok.RequiredArgsConstructor;

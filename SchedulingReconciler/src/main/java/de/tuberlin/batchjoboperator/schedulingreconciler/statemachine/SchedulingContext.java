@@ -1,14 +1,15 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.statemachine;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
-import de.tuberlin.batchjoboperator.common.StateMachineContext;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
+import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
+import de.tuberlin.batchjoboperator.common.crd.batchjob.CreationRequest;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.Scheduling;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState;
 import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
-import de.tuberlin.batchjoboperator.common.crd.slots.SlotIDsAnnotationString;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotOccupationStatus;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotState;
+import de.tuberlin.batchjoboperator.common.statemachine.StateMachineContext;
 import de.tuberlin.batchjoboperator.schedulingreconciler.strategy.QueueBasedStrategy;
 import de.tuberlin.batchjoboperator.schedulingreconciler.strategy.SchedulingStrategy;
 import de.tuberlin.batchjoboperator.schedulingreconciler.strategy.SlotBasedStrategy;
@@ -23,16 +24,13 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAMESPACE;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_REPLICATION;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_SLOTS_NAME;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_SLOTS_NAMESPACE;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_SLOT_IDS;
+import static de.tuberlin.batchjoboperator.common.crd.NamespacedName.getName;
+import static de.tuberlin.batchjoboperator.common.crd.NamespacedName.getNamespace;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
 @Slf4j
@@ -40,6 +38,12 @@ import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 public class SchedulingContext implements StateMachineContext {
     @Getter
     private final Scheduling resource;
+
+    private static final Set<SchedulingJobState.SchedulingJobStateEnum> alreadyScheduledStates = Set.of(
+            SchedulingJobState.SchedulingJobStateEnum.SUBMITTED,
+            SchedulingJobState.SchedulingJobStateEnum.SCHEDULED,
+            SchedulingJobState.SchedulingJobStateEnum.COMPLETED
+    );
 
     @Getter
     private final KubernetesClient client;
@@ -61,12 +65,7 @@ public class SchedulingContext implements StateMachineContext {
         return getStrategy().getJobsDistinctInOrder();
     }
 
-
-    private static final Set<SchedulingJobState.SchedulingJobStateEnum> alreadyScheduledStates = Set.of(
-            SchedulingJobState.SchedulingJobStateEnum.Submitted,
-            SchedulingJobState.SchedulingJobStateEnum.Scheduled,
-            SchedulingJobState.SchedulingJobStateEnum.Completed
-    );
+    private int schedulingRetryCounter = 0;
 
     public Set<NamespacedName> getAlreadyScheduledJobs() {
         return getResource().getStatus().getJobStates().stream()
@@ -80,19 +79,20 @@ public class SchedulingContext implements StateMachineContext {
 
     public Set<Integer> getFreeSlots() {
         if (freeSlots == null) {
-            this.freeSlots = getSlots().getStatus().getSlots().stream().filter(occ -> occ.getState() == SlotState.FREE)
-                                       .map(SlotOccupationStatus::getPosition)
-                                       .collect(Collectors.toSet());
+            this.freeSlots = getTestbed().getStatus().getSlots().stream()
+                                         .filter(occ -> occ.getState() == SlotState.FREE)
+                                         .map(SlotOccupationStatus::getPosition)
+                                         .collect(Collectors.toSet());
         }
 
         return freeSlots;
     }
 
-    public Slot getSlots() {
-        return getSlots(false);
+    public Slot getTestbed() {
+        return getTestbed(false);
     }
 
-    public Slot getSlots(boolean forceUpdate) {
+    public Slot getTestbed(boolean forceUpdate) {
         if (slot == null || forceUpdate) {
             this.slot =
                     getNullSafe(() ->
@@ -115,61 +115,81 @@ public class SchedulingContext implements StateMachineContext {
         return strategy;
     }
 
-    public void acquireJob(NamespacedName key) {
-        log.info("Acquire Job {}", key);
+    public void acquireJob(NamespacedName jobName) {
+        log.info("Acquire Job {}", jobName);
+        this.acquiringJobEvent(jobName);
+        var resourceName = NamespacedName.of(resource);
         var updatedJob =
-                client.resources(BatchJob.class).inNamespace(key.getNamespace()).withName(key.getName())
-                      .edit((job) -> {
-                          if (job.getMetadata().getLabels() == null) {
-                              job.getMetadata().setLabels(new HashMap<>());
+                client.resources(BatchJob.class).inNamespace(jobName.getNamespace()).withName(jobName.getName())
+                      .edit(job -> {
+                          var activeScheduling = job.getStatus().getActiveScheduling();
+
+                          if (job.getStatus().getState() == BatchJobState.FailedState) {
+                              throw new JobInFailedStateException(job);
                           }
 
-                          var resourceName = NamespacedName.of(resource);
-                          job.getMetadata().getLabels().put(ACTIVE_SCHEDULING_LABEL_NAME, resourceName.getName());
-                          job.getMetadata().getLabels()
-                             .put(ACTIVE_SCHEDULING_LABEL_NAMESPACE, resourceName.getNamespace());
+                          if (activeScheduling != null && !activeScheduling.equals(resourceName)) {
+                              throw new JobClaimedByAnotherSchedulingException(jobName, activeScheduling);
+                          }
 
+                          job.getSpec().setActiveScheduling(resourceName);
                           return job;
                       });
 
-        this.jobCache.put(key, updatedJob);
+        this.jobCache.put(jobName, updatedJob);
     }
 
-    public void acquireSlot(NamespacedName name) {
-        log.info("Acquire Slot {}", name);
-
-        this.slot = client.resources(Slot.class).inNamespace(name.getNamespace()).withName(name.getName())
-                          .edit((slots) -> {
-                              if (slots.getMetadata().getLabels() == null) {
-                                  slots.getMetadata().setLabels(new HashMap<>());
+    public void acquireSlot(NamespacedName testedName) {
+        log.info("Acquire Testbed {}", testedName);
+        var schedulingName = NamespacedName.of(resource);
+        this.slot = client.resources(Slot.class).inNamespace(testedName.getNamespace()).withName(testedName.getName())
+                          .edit((editSlots) -> {
+                              if (editSlots.getMetadata().getLabels() == null) {
+                                  editSlots.getMetadata().setLabels(new HashMap<>());
                               }
 
-                              var resourceName = NamespacedName.of(resource);
-                              slots.getMetadata().getLabels()
-                                   .put(ACTIVE_SCHEDULING_LABEL_NAME, resourceName.getName());
-                              slots.getMetadata().getLabels()
-                                   .put(ACTIVE_SCHEDULING_LABEL_NAMESPACE, resourceName.getNamespace());
+                              if (editSlots.getMetadata().getLabels().containsKey(ACTIVE_SCHEDULING_LABEL_NAME) &&
+                                      editSlots.getMetadata().getLabels().containsKey(ACTIVE_SCHEDULING_LABEL_NAMESPACE)
+                              ) {
+                                  var activeScheduling = new NamespacedName(
+                                          editSlots.getMetadata().getLabels().getOrDefault(ACTIVE_SCHEDULING_LABEL_NAME,
+                                                  ""),
+                                          editSlots.getMetadata().getLabels()
+                                                   .getOrDefault(ACTIVE_SCHEDULING_LABEL_NAMESPACE, "")
+                                  );
+                                  if (!activeScheduling.equals(schedulingName)) {
+                                      throw new JobClaimedByAnotherSchedulingException(testedName, activeScheduling);
+                                  }
+                              }
 
-                              return slots;
+                              editSlots.getMetadata().getLabels()
+                                       .put(ACTIVE_SCHEDULING_LABEL_NAME, schedulingName.getName());
+                              editSlots.getMetadata().getLabels()
+                                       .put(ACTIVE_SCHEDULING_LABEL_NAMESPACE, schedulingName.getNamespace());
+
+                              return editSlots;
                           });
     }
 
     public void submitJob(NamespacedName name,
                           Set<Integer> slotsUsed) {
         log.info("Requesting Creation for {}", name);
-
+        var resourceName = NamespacedName.of(resource);
         client.resources(BatchJob.class).inNamespace(name.getNamespace()).withName(name.getName())
               .edit((BatchJob job) -> {
-                  job.getMetadata().getLabels().putAll(Map.of(
-                          APPLICATION_CREATION_REQUEST_SLOT_IDS,
-                          SlotIDsAnnotationString.ofIds(slotsUsed).toString(),
-                          APPLICATION_CREATION_REQUEST_REPLICATION,
-                          slotsUsed.size() + "",
-                          APPLICATION_CREATION_REQUEST_SLOTS_NAME,
-                          getSlots().getMetadata().getName(),
-                          APPLICATION_CREATION_REQUEST_SLOTS_NAMESPACE,
-                          getSlots().getMetadata().getNamespace()
-                  ));
+                  var activeScheduling = job.getSpec().getActiveScheduling();
+                  if (activeScheduling == null || !activeScheduling.equals(resourceName)) {
+                      throw new JobClaimedByAnotherSchedulingException(name, activeScheduling);
+                  }
+
+                  var request = new CreationRequest(slotsUsed, NamespacedName.of(slot), slotsUsed.size());
+                  var currentRequest = job.getSpec().getCreationRequest();
+                  if (currentRequest != null && !request.equals(currentRequest)) {
+                      throw new JobClaimedByAnotherSchedulingException(name, activeScheduling);
+                  }
+
+                  job.getSpec().setCreationRequest(request);
+
                   return job;
               });
 
@@ -217,19 +237,61 @@ public class SchedulingContext implements StateMachineContext {
     }
 
     public void jobScheduledEvent(NamespacedName name) {
-        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.Scheduled);
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.SCHEDULED);
     }
 
     public void jobCompletedEvent(NamespacedName name) {
-        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.Completed);
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.COMPLETED);
     }
 
     private void submitJob(NamespacedName name) {
-        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.Submitted);
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.SUBMITTED);
         jobsSubmittedDuringCurrentCycle.add(name);
     }
 
     public void jobInQueueEvent(NamespacedName name) {
-        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.InQueue);
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.IN_QUEUE);
     }
+
+    public void acquiringJobEvent(NamespacedName name) {
+        logJobEvent(name, SchedulingJobState.SchedulingJobStateEnum.ACQUIRING);
+    }
+
+    public int schedulingRetryCounterIncAndGet() {
+        return ++schedulingRetryCounter;
+    }
+
+    public void releaseJobIfClaimed(NamespacedName name) {
+        client.resources(BatchJob.class)
+              .inNamespace(name.getNamespace())
+              .withName(name.getName())
+              .edit(editJob -> {
+                  var activeScheduling = editJob.getStatus().getActiveScheduling();
+                  if (NamespacedName.of(resource).equals(activeScheduling)) {
+                      editJob.getSpec().setActiveScheduling(null);
+                      editJob.getSpec().setCreationRequest(null);
+                  }
+
+                  return editJob;
+              });
+    }
+
+    public void releaseTestbedIfClaimed(NamespacedName name) {
+        client.resources(Slot.class).inNamespace(name.getNamespace()).withName(name.getName())
+              .edit(editTestbed -> {
+                  if (editTestbed.getMetadata().getLabels() == null ||
+                          !editTestbed.getMetadata().getLabels().getOrDefault(ACTIVE_SCHEDULING_LABEL_NAME, "")
+                                      .equals(getName(resource)) ||
+                          !editTestbed.getMetadata().getLabels().getOrDefault(ACTIVE_SCHEDULING_LABEL_NAMESPACE, "")
+                                      .equals(getNamespace(resource))
+                  ) {
+                      return editTestbed;
+                  }
+
+                  editTestbed.getMetadata().getLabels().remove(ACTIVE_SCHEDULING_LABEL_NAME);
+                  editTestbed.getMetadata().getLabels().remove(ACTIVE_SCHEDULING_LABEL_NAMESPACE);
+                  return editTestbed;
+              });
+    }
+
 }

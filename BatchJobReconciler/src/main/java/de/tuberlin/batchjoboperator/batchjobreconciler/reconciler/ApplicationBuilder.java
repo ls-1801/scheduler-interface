@@ -66,6 +66,8 @@ public abstract class ApplicationBuilder {
     }
 
     protected Affinity createAffinity() {
+
+
         return new AffinityBuilder()
                 .withNewNodeAffinity().withNewRequiredDuringSchedulingIgnoredDuringExecution()
                 .addNewNodeSelectorTerm().addNewMatchExpression()

@@ -1,13 +1,14 @@
 package de.tuberlin.batchjoboperator;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotSpec;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotStatus;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotsStatusState;
-import de.tuberlin.batchjoboperator.slotsreconciler.ApplicationPodView;
-import de.tuberlin.batchjoboperator.slotsreconciler.SlotReconciler;
+import de.tuberlin.batchjoboperator.testbedreconciler.ApplicationPodView;
+import de.tuberlin.batchjoboperator.testbedreconciler.TestbedReconciler;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_IS_GHOSTPOD_NAME;
@@ -35,7 +37,7 @@ import static org.awaitility.Awaitility.await;
 
 @Slf4j
 @EnableKubernetesMockClient(https = false, crud = true)
-class SlotReconcilerTest extends BaseReconcilerTest {
+class TestbedReconcilerTest extends BaseReconcilerTest {
 
     private Slot createSlot(@Nonnull SlotSpec spec, @Nullable SlotStatus status) {
         var slot = new Slot();
@@ -235,8 +237,8 @@ class SlotReconcilerTest extends BaseReconcilerTest {
 
     @Nonnull
     @Override
-    protected List<Reconciler> createReconcilers() {
-        return Collections.singletonList(new SlotReconciler(client));
+    protected List<Reconciler> createReconcilers(Supplier<KubernetesClient> clientSupplier) {
+        return Collections.singletonList(new TestbedReconciler(clientSupplier.get()));
     }
 
     @Override

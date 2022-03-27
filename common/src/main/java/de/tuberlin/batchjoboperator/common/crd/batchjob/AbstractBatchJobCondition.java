@@ -1,6 +1,6 @@
 package de.tuberlin.batchjoboperator.common.crd.batchjob;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import lombok.Data;
 
 import javax.annotation.Nullable;

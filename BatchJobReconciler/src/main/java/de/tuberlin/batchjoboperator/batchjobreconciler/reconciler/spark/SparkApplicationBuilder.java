@@ -8,8 +8,9 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import k8s.sparkoperator.SparkApplication;
 import k8s.sparkoperator.V1beta2SparkApplicationSpecBatchSchedulerOptions;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.math.NumberUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_NAME;
@@ -22,17 +23,14 @@ public class SparkApplicationBuilder extends ApplicationBuilder {
         super(job, slots);
     }
 
+    // The MemoryOverhead of the Executors is overwritten to 0m, however it seems that the spark spec uses
+    // different unit descriptions. Spark Operator seems to only accept integers. The amount is always converted to
+    // mibis.
     public String quantityToSparkMemory(Quantity memoryQuantity) {
-        long amount = (long) (NumberUtils.toLong(memoryQuantity.getAmount(), 0) / 1.75);
-
-        switch (memoryQuantity.getFormat()) {
-            case "Mi":
-                return amount + "m";
-            case "Gi":
-                return amount + "g";
-            default:
-                throw new RuntimeException("Spark Memory conversion not implemented for " + memoryQuantity);
-        }
+        var bytes = Quantity.getAmountInBytes(memoryQuantity);
+        var mibi = bytes.divide(BigDecimal.valueOf(2).pow(20));
+        var amountInMibi = mibi.setScale(0, RoundingMode.UP).intValue();
+        return amountInMibi + "m";
     }
 
     public void create(KubernetesClient client) {
@@ -49,9 +47,11 @@ public class SparkApplicationBuilder extends ApplicationBuilder {
 
 
         sparkApp.getSpec().getExecutor()
+                .cores(1)//TODO: Check if the cpu counts need to be adjusted for slot sizes greater than 1000m CPU
                 .coreRequest(slots.getSpec().getResourcesPerSlot().get("cpu").toString())
                 .labels(createLabels())
                 .affinity(createAffinity())
+                .memoryOverhead("0m")
                 .memory(quantityToSparkMemory(slots.getSpec().getResourcesPerSlot().get("memory")))
                 .schedulerName("external-scheduler")
                 .instances(freeSlots.size())

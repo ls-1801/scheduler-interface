@@ -1,69 +1,19 @@
----
 apiVersion: batchjob.gcr.io/v1alpha1
 kind: BatchJob
 metadata:
   name: batchjob-flink2
+  namespace: default
 spec:
-  #  requeue: true
+  externalScheduler:
+    profiler:
+      - batchjob-flink: 24 (16)
+        batchjob-flink3: 25 (16)
+        batchjob-sample: 27 (16)
+        batchjob-sample3: 31 (8)
+        spark-crawler: 30 (7)
   flinkSpec:
-    jarFile: ./examples/streaming/WordCount.jar
+    args:
+      - --input
+      - ./README.txt
     className: org.apache.flink.streaming.examples.wordcount.WordCount
-    args: [ "--input", "./README.txt" ]
-
----
-apiVersion: batchjob.gcr.io/v1alpha1
-kind: BatchJob
-metadata:
-  name: batchjob-flink
-#  labels:
-#   batchjob.tuberlin.de/active-scheduling-name: scheduling
-#   batchjob.tuberlin.de/active-scheduling-namespace: default
-#   batchjob.tuberlin.de/application-creation-request-replication: "2"
-#   batchjob.tuberlin.de/application-creation-request-slot-ids: "2_3"
-#   batchjob.tuberlin.de/application-creation-request-slots-name: batchjob-slots
-#   batchjob.tuberlin.de/application-creation-request-slots-namespace: default
-spec:
-  #  requeue: true
-  flinkSpec:
     jarFile: ./examples/streaming/WordCount.jar
-    className: org.apache.flink.streaming.examples.wordcount.WordCount
-    args: [ "--input", "./README.txt" ]
-
----
-apiVersion: batchjob.gcr.io/v1alpha1
-kind: BatchJob
-metadata:
-  name: batchjob-flink3
-#  labels:
-#   batchjob.tuberlin.de/active-scheduling-name: scheduling
-#   batchjob.tuberlin.de/active-scheduling-namespace: default
-#   batchjob.tuberlin.de/application-creation-request-replication: "2"
-#   batchjob.tuberlin.de/application-creation-request-slot-ids: "2_3"
-#   batchjob.tuberlin.de/application-creation-request-slots-name: batchjob-slots
-#   batchjob.tuberlin.de/application-creation-request-slots-namespace: default
-spec:
-  #  requeue: true
-  flinkSpec:
-    jarFile: ./examples/streaming/WordCount.jar
-    className: org.apache.flink.streaming.examples.wordcount.WordCount
-    args: [ "--input", "./README.txt" ]
-
-
-#---
-#apiVersion: batchjob.gcr.io/v1alpha1
-#kind: Scheduling
-#metadata:
-#  name: scheduling
-#spec:
-#  slots:
-#    name: batchjob-slots
-#    namespace: default
-#  queueBased:
-#    - name: batchjob-flink2
-#      namespace: default
-#    - name: batchjob-flink2
-#      namespace: default
-#    - name: batchjob-flink2
-#      namespace: default
-#    - name: batchjob-flink2
-#      namespace: default

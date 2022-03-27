@@ -3,7 +3,6 @@ kind: BatchJob
 metadata:
   name: batchjob-sample3
 spec:
-  requeue: true
   sparkSpec:
     type: Scala
     mode: cluster
@@ -12,7 +11,7 @@ spec:
     mainClass: org.apache.spark.examples.SparkPi
     mainApplicationFile: "local:///opt/spark/examples/jars/spark-examples_2.12-3.1.1.jar"
     arguments:
-      - "1000"
+      - "100000"
     sparkVersion: "3.1.1"
     restartPolicy:
       type: Never

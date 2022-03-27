@@ -1,0 +1,22 @@
+apiVersion: batchjob.gcr.io/v1alpha1
+kind: Scheduling
+metadata:
+  name: profiler-scheduling-0
+  namespace: default
+spec:
+  queueBased:
+    - name: spark-crawler
+      namespace: default
+    - name: spark-crawler
+      namespace: default
+    - name: batchjob-spark
+      namespace: default
+    - name: batchjob-spark
+      namespace: default
+    - name: batchjob-flink
+      namespace: default
+    - name: batchjob-flink
+      namespace: default
+  slots:
+    name: profiler-slots
+    namespace: default

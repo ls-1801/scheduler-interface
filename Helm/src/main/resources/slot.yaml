@@ -4,7 +4,7 @@ metadata:
   name: batchjob-slots
   namespace: default
 spec:
-  slotsPerNode: 2
+  slotsPerNode: 4
   nodeLabel: "tuberlin.de/node-with-slots"
   resourcesPerSlot:
     cpu: "200m"

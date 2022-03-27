@@ -1,6 +1,6 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.statemachine;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.JobConditionValue;
 import lombok.Getter;

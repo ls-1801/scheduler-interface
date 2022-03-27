@@ -1,12 +1,13 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.statemachine;
 
 import com.google.common.collect.ImmutableMap;
-import de.tuberlin.batchjoboperator.common.Condition;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.AbstractSchedulingJobCondition;
+import de.tuberlin.batchjoboperator.common.statemachine.Condition;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -15,10 +16,10 @@ import java.util.function.Supplier;
 public abstract class SchedulingCondition extends AbstractSchedulingJobCondition implements Condition<SchedulingContext> {
 
     public static final String AWAIT_JOBS_ACQUIRED_CONDITION = "AWAIT_JOBS_ACQUIRED_CONDITION";
-    public static final String AWAIT_SLOTS_ACQUIRED_CONDITION = "AWAIT_SLOTS_ACQUIRED_CONDITION";
+    public static final String AWAIT_TESTBED_ACQUIRED_CONDITION = "AWAIT_SLOTS_ACQUIRED_CONDITION";
     public static final String AWAIT_JOBS_ENQUEUE = "AWAIT_JOBS_ENQUEUE";
     public static final String AWAIT_JOBS_RELEASED_CONDITION = "AWAIT_JOBS_RELEASED_CONDITION";
-    public static final String AWAIT_SLOTS_RELEASED_CONDITION = "AWAIT_SLOTS_RELEASED_CONDITION";
+    public static final String AWAIT_TESTBED_RELEASED_CONDITION = "AWAIT_SLOTS_RELEASED_CONDITION";
 
     public static final String AWAIT_JOBS_SCHEDULED_CONDITION = "AWAIT_JOBS_SCHEDULED_CONDITION";
     public static final String AWAIT_COMPLETION_CONDITION = "AWAIT_COMPLETION_CONDITION";
@@ -33,10 +34,10 @@ public abstract class SchedulingCondition extends AbstractSchedulingJobCondition
     public static final Map<String, Supplier<SchedulingCondition>> constructorMap =
             new ImmutableMap.Builder<String, Supplier<SchedulingCondition>>()
                     .put(AWAIT_JOBS_ACQUIRED_CONDITION, AwaitJobsAcquiredCondition::new)
-                    .put(AWAIT_SLOTS_ACQUIRED_CONDITION, AwaitSlotsAcquiredCondition::new)
+                    .put(AWAIT_TESTBED_ACQUIRED_CONDITION, AwaitTestbedAcquiredCondition::new)
                     .put(AWAIT_JOBS_ENQUEUE, AwaitJobsEnqueueCondition::new)
                     .put(AWAIT_JOBS_RELEASED_CONDITION, AwaitJobsReleasedCondition::new)
-                    .put(AWAIT_SLOTS_RELEASED_CONDITION, AwaitSlotsReleasedCondition::new)
+                    .put(AWAIT_TESTBED_RELEASED_CONDITION, AwaitTestbedReleasedCondition::new)
                     .put(AWAIT_JOBS_SCHEDULED_CONDITION, AwaitJobsScheduledCondition::new)
                     .put(AWAIT_COMPLETION_CONDITION, AwaitJobsCompletionCondition::new)
                     .put(AWAIT_NUMBER_OF_SLOTS_CONDITION, () -> new AwaitNumberOfSlotsAvailableCondition())
@@ -50,8 +51,7 @@ public abstract class SchedulingCondition extends AbstractSchedulingJobCondition
 
     @Override
     public void initialize(SchedulingContext context) {
-//            this.name = NamespacedName.of(context.getResource());
-//            this.job = context.getResource();
+        this.lastUpdateTimestamp = Instant.now().toString();
     }
 
     @Override
@@ -63,7 +63,7 @@ public abstract class SchedulingCondition extends AbstractSchedulingJobCondition
 
         if (value != result) {
             log.debug("Condition: {} has changed", getCondition());
-            lastUpdateTimestamp = LocalDateTime.now().toString();
+            lastUpdateTimestamp = Instant.now().toString();
             value = result;
         }
     }
@@ -71,7 +71,7 @@ public abstract class SchedulingCondition extends AbstractSchedulingJobCondition
     protected boolean error(String problem) {
         log.error("Condition {} got an error: \n{}\n", getCondition(), problem);
         if (!problem.equals(error)) {
-            lastUpdateTimestamp = LocalDateTime.now().toString();
+            lastUpdateTimestamp = Instant.now().toString();
         }
 
         this.error = problem;
@@ -79,4 +79,18 @@ public abstract class SchedulingCondition extends AbstractSchedulingJobCondition
     }
 
     protected abstract boolean updateInternal(SchedulingContext client);
+
+    protected boolean checkTimeout(Duration duration) {
+        if (lastUpdateTimestamp == null) {
+            log.warn("{} checked timeout, but timestamp does not exist", getCondition());
+            return false;
+        }
+
+        if (Instant.parse(lastUpdateTimestamp).plus(duration).isBefore(Instant.now())) {
+            log.warn("{}: timeout exceeded", getCondition());
+            return true;
+        }
+
+        return false;
+    }
 }

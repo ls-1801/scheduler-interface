@@ -2,16 +2,15 @@ package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler;
 
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.flink.FlinkApplicationProvider;
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.spark.SparkApplicationProvider;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
-import de.tuberlin.batchjoboperator.common.StateMachineContext;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
+import de.tuberlin.batchjoboperator.common.crd.batchjob.CreationRequest;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.Scheduling;
 import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotsStatusState;
+import de.tuberlin.batchjoboperator.common.statemachine.StateMachineContext;
 import io.fabric8.kubernetes.client.CustomResource;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import k8s.flinkoperator.FlinkCluster;
-import k8s.sparkoperator.SparkApplication;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,17 +48,8 @@ public class BatchJobContext implements StateMachineContext {
 
     }
 
-    public void removeApplication(NamespacedName name) {
-        if (resource.isSpark()) {
-            client.resources(SparkApplication.class)
-                  .inNamespace(resource.getMetadata().getNamespace())
-                  .withName(resource.getMetadata().getName()).delete();
-        }
-        else if (resource.isFlink()) {
-            client.resources(FlinkCluster.class)
-                  .inNamespace(resource.getMetadata().getNamespace())
-                  .withName(resource.getMetadata().getName()).delete();
-        }
+    public void removeApplication() {
+        getApplication().delete();
     }
 
     public void createApplication(CreationRequest request) {

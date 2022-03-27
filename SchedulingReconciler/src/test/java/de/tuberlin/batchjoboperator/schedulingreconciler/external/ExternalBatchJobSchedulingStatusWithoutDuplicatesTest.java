@@ -9,10 +9,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-import static de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState.SchedulingJobStateEnum.Completed;
-import static de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState.SchedulingJobStateEnum.InQueue;
-import static de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState.SchedulingJobStateEnum.Scheduled;
-import static de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState.SchedulingJobStateEnum.Submitted;
+import static de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState.SchedulingJobStateEnum.COMPLETED;
+import static de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState.SchedulingJobStateEnum.IN_QUEUE;
+import static de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState.SchedulingJobStateEnum.SCHEDULED;
+import static de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingJobState.SchedulingJobStateEnum.SUBMITTED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
@@ -27,17 +27,17 @@ class ExternalBatchJobSchedulingStatusWithoutDuplicatesTest {
     @Test
     void testEnumOrder() {
         var withDuplicates = Set.of(
-                event("name1", Scheduled),
-                event("name1", Submitted),
-                event("name1", InQueue),
-                event("name1", Completed),
+                event("name1", SCHEDULED),
+                event("name1", SUBMITTED),
+                event("name1", IN_QUEUE),
+                event("name1", COMPLETED),
 
-                event("name2", InQueue),
-                event("name2", Completed),
-                event("name2", Submitted),
-                event("name2", Scheduled),
+                event("name2", IN_QUEUE),
+                event("name2", COMPLETED),
+                event("name2", SUBMITTED),
+                event("name2", SCHEDULED),
 
-                event("name3", InQueue)
+                event("name3", IN_QUEUE)
         );
 
         var without = new ExternalBatchJobSchedulingStatusWithoutDuplicates(withDuplicates);
@@ -45,9 +45,9 @@ class ExternalBatchJobSchedulingStatusWithoutDuplicatesTest {
         assertThat(without.getStatus())
                 .extracting("name", "state")
                 .containsExactlyInAnyOrder(
-                        Tuple.tuple("name1", Completed),
-                        Tuple.tuple("name2", Completed),
-                        Tuple.tuple("name3", InQueue)
+                        Tuple.tuple("name1", COMPLETED),
+                        Tuple.tuple("name2", COMPLETED),
+                        Tuple.tuple("name3", IN_QUEUE)
                 );
 
     }
@@ -55,17 +55,17 @@ class ExternalBatchJobSchedulingStatusWithoutDuplicatesTest {
     @Test
     void jsonMapping() throws JsonProcessingException {
         var withDuplicates = Set.of(
-                event("name1", Scheduled),
-                event("name1", Submitted),
-                event("name1", InQueue),
-                event("name1", Completed),
+                event("name1", SCHEDULED),
+                event("name1", SUBMITTED),
+                event("name1", IN_QUEUE),
+                event("name1", COMPLETED),
 
-                event("name2", InQueue),
-                event("name2", Completed),
-                event("name2", Submitted),
-                event("name2", Scheduled),
+                event("name2", IN_QUEUE),
+                event("name2", COMPLETED),
+                event("name2", SUBMITTED),
+                event("name2", SCHEDULED),
 
-                event("name3", InQueue)
+                event("name3", IN_QUEUE)
         );
 
         var without = new ExternalBatchJobSchedulingStatusWithoutDuplicates(withDuplicates);
@@ -80,9 +80,9 @@ class ExternalBatchJobSchedulingStatusWithoutDuplicatesTest {
         assertThat(set)
                 .extracting("name", "state")
                 .containsExactlyInAnyOrder(
-                        Tuple.tuple("name1", Completed),
-                        Tuple.tuple("name2", Completed),
-                        Tuple.tuple("name3", InQueue)
+                        Tuple.tuple("name1", COMPLETED),
+                        Tuple.tuple("name2", COMPLETED),
+                        Tuple.tuple("name3", IN_QUEUE)
                 );
 
         var uut = mapper.readValue(jsonString, ExternalBatchJobSchedulingStatusWithoutDuplicates.class);
@@ -90,9 +90,9 @@ class ExternalBatchJobSchedulingStatusWithoutDuplicatesTest {
         assertThat(uut.getStatus())
                 .extracting("name", "state")
                 .containsExactlyInAnyOrder(
-                        Tuple.tuple("name1", Completed),
-                        Tuple.tuple("name2", Completed),
-                        Tuple.tuple("name3", InQueue)
+                        Tuple.tuple("name1", COMPLETED),
+                        Tuple.tuple("name2", COMPLETED),
+                        Tuple.tuple("name3", IN_QUEUE)
                 );
     }
 }

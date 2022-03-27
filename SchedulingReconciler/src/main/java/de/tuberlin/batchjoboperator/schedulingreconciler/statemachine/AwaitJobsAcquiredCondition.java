@@ -1,6 +1,6 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.statemachine;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.JobConditionValue;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,8 +8,6 @@ import lombok.Setter;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAME;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAMESPACE;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
 public class AwaitJobsAcquiredCondition extends SchedulingCondition {
@@ -30,14 +28,8 @@ public class AwaitJobsAcquiredCondition extends SchedulingCondition {
 
         this.jobs = this.jobs.stream()
                              .map(p -> {
-                                 var activeSchedulingName = getNullSafe(() -> {
-                                     var job = context.getJob(p.getName());
-                                     var name = job.getMetadata().getLabels().get(ACTIVE_SCHEDULING_LABEL_NAME);
-                                     var namespace =
-                                             job.getMetadata().getLabels().get(ACTIVE_SCHEDULING_LABEL_NAMESPACE);
-
-                                     return new NamespacedName(name, namespace);
-                                 });
+                                 var activeSchedulingName =
+                                         getNullSafe(() -> context.getJob(p.getName()).getSpec().getActiveScheduling());
 
                                  var isActive = activeSchedulingName
                                          .map(activeScheduling -> activeScheduling.equals(NamespacedName.of(context.getResource())))

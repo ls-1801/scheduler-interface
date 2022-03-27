@@ -2,7 +2,7 @@ package de.tuberlin.batchjoboperator.schedulingreconciler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.AbstractSchedulingJobCondition;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.JobConditionValue;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.AwaitJobsAcquiredCondition;

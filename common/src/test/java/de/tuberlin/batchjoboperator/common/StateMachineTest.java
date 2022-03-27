@@ -1,5 +1,11 @@
 package de.tuberlin.batchjoboperator.common;
 
+import de.tuberlin.batchjoboperator.common.statemachine.Condition;
+import de.tuberlin.batchjoboperator.common.statemachine.ConditionProvider;
+import de.tuberlin.batchjoboperator.common.statemachine.OnCondition;
+import de.tuberlin.batchjoboperator.common.statemachine.State;
+import de.tuberlin.batchjoboperator.common.statemachine.StateMachine;
+import de.tuberlin.batchjoboperator.common.statemachine.StateMachineContext;
 import lombok.Data;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.assertj.core.groups.Tuple;

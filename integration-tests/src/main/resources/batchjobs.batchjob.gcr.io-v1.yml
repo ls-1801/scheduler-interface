@@ -13,7 +13,11 @@ spec:
     singular: batchjob
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - additionalPrinterColumns:
+        - jsonPath: .status.state
+          name: status
+          type: string
+      name: v1alpha1
       schema:
         openAPIV3Schema:
           properties:
@@ -5092,17 +5096,44 @@ spec:
                         type: object
                       type: array
                   type: object
+                creationRequest:
+                  properties:
+                    slotIds:
+                      items:
+                        type: integer
+                      type: array
+                    slotsName:
+                      properties:
+                        namespace:
+                          type: string
+                        name:
+                          type: string
+                      type: object
+                    replication:
+                      type: integer
+                  type: object
+                activeScheduling:
+                  properties:
+                    namespace:
+                      type: string
+                    name:
+                      type: string
+                  type: object
                 externalScheduler:
                   additionalProperties:
                     items:
-                      x-kubernetes-preserve-unknown-fields: true
+                      additionalProperties:
+                        type: string
                       type: object
                     type: array
-                  x-kubernetes-preserve-unknown-fields: true
                   type: object
               type: object
             status:
               properties:
+                problems:
+                  items:
+                    type: string
+                  type: array
                 state:
                   enum:
                     - InitState
@@ -5117,8 +5148,6 @@ spec:
                     - UnknownState
                     - state
                   type: string
-                latestResourceVersion:
-                  type: integer
                 scheduledEvents:
                   items:
                     properties:
@@ -5177,6 +5206,8 @@ spec:
                         type: string
                     type: object
                   type: array
+                observedGeneration:
+                  type: integer
               type: object
           type: object
       served: true

@@ -1,15 +1,18 @@
 package de.tuberlin.batchjoboperator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import de.tuberlin.batchjoboperator.batchjobreconciler.CustomClonerConfigurationService;
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.BatchJobConditionDeserializer;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.Scheduling;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingSpec;
+import de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingState;
 import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
+import de.tuberlin.batchjoboperator.common.crd.slots.SlotIDsAnnotationString;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotOccupationStatus;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotSpec;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotState;
@@ -18,7 +21,9 @@ import de.tuberlin.batchjoboperator.common.crd.slots.SlotsStatusState;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingJobConditionDeserializer;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeBuilder;
+import io.fabric8.kubernetes.api.model.NodeSelectorRequirement;
 import io.fabric8.kubernetes.api.model.NodeSelectorTerm;
+import io.fabric8.kubernetes.api.model.NodeSelectorTermBuilder;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition;
@@ -27,20 +32,25 @@ import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import io.javaoperatorsdk.operator.Operator;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
+import k8s.flinkoperator.FlinkCluster;
+import k8s.sparkoperator.SparkApplication;
+import lombok.Builder;
 import lombok.SneakyThrows;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Condition;
 import org.assertj.core.api.HamcrestCondition;
+import org.assertj.core.groups.Tuple;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
-import javax.annotation.Nonnull;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -48,11 +58,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAMESPACE;
+import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_IDS_NAME;
+import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_IS_GHOSTPOD_NAME;
+import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_LABEL_NAME;
+import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_SLOT_ID_NAME;
+import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_POD_TARGET_NODE_NAME;
 import static de.tuberlin.batchjoboperator.common.crd.slots.SlotsStatusState.SUCCESS;
 import static de.tuberlin.batchjoboperator.common.util.General.enumerate;
 import static java.util.Collections.emptyList;
@@ -68,7 +86,7 @@ public abstract class BaseReconcilerTest {
     protected static final String TEST_SLOT_NAME_1 = "test-slot-1";
     protected static final String TEST_SLOT_NAME_2 = "test-slot-2";
     protected static final String[] TEST_NODE_NAMES = new String[]{"node-1", "node-2", "node-3", "node-4"};
-    protected static final int TIMEOUT_DURATION_IN_SECONDS = 1;
+    protected static final int TIMEOUT_DURATION_IN_SECONDS = 2;
     protected static final String NAMESPACE = "test-namespace";
     protected static final String GHOST_POD_PATTER = "test-ghost-pod-{0}-{1}";
     protected static final String TEST_SCHEDULING = "test-scheduling";
@@ -82,42 +100,52 @@ public abstract class BaseReconcilerTest {
         Serialization.jsonMapper()
                      .registerModule(BatchJobConditionDeserializer.getModule())
                      .registerModule(SchedulingJobConditionDeserializer.getModule());
+
+
     }
 
 
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
     protected KubernetesClient client;
-    private Operator operator;
+    private List<Operator> operators;
 
     @BeforeEach
     void setUp() throws FileNotFoundException {
         server.before();
+        var httpLogger = Logger.getLogger("okhttp3.mockwebserver.MockWebServer");
+        httpLogger.setLevel(Level.SEVERE);
         registerCRDs();
-
         client = server.getClient();
 
         Arrays.stream(TEST_NODE_NAMES).forEach(this::createNode);
 
-        var configService = new CustomClonerConfigurationService(MAPPER);
-        operator = new Operator(server.getClient(), configService);
-        createReconcilers().forEach(reconciler -> {
-            var controllerConfiguration = configService.getConfigurationFor(reconciler);
-            controllerConfiguration.setConfigurationService(configService);
-            operator.register(reconciler);
-        });
+        operators = createReconcilers(() -> server.getKubernetesMockServer().createClient()).stream()
+                                                                                            .map(reconciler -> {
+                                                                                                var client =
+                                                                                                        server.getKubernetesMockServer()
+                                                                                                                   .createClient();
+                                                                                                var configService =
+                                                                                                        new CustomClonerConfigurationService(MAPPER);
+                                                                                                var operator = new Operator(client, configService);
+                                                                                                var controllerConfiguration = configService.getConfigurationFor(reconciler);
+                                                                                                controllerConfiguration.setConfigurationService(configService);
+                                                                                                operator.register(reconciler);
+                                                                                                return operator;
+                                                                                            })
+                                                                                            .collect(Collectors.toList());
 
-        operator.start();
+        operators.forEach(Operator::start);
+
     }
 
-    @Nonnull
-    protected abstract List<Reconciler> createReconcilers();
+    protected abstract List<Reconciler> createReconcilers(Supplier<KubernetesClient> clientSupplier);
 
     protected abstract void registerCRDs();
 
     @AfterEach
     void tearDown() {
-        operator.stop();
+        operators.forEach(Operator::stop);
         server.after();
     }
 
@@ -258,45 +286,56 @@ public abstract class BaseReconcilerTest {
     }
 
     protected Slot createSlot() {
-        return createSlot(defaultSlot());
+        return createSlot(SlotConfiguration.builder().build());
     }
 
-    protected Slot createSlot(NamespacedName name) {
+    protected Slot createSlot(SlotConfiguration configuration) {
         var slot = new Slot();
-        slot.getMetadata().setName(name.getName());
-        slot.getMetadata().setNamespace(name.getNamespace());
+        slot.getMetadata().setName(configuration.getName());
+        slot.getMetadata().setNamespace(configuration.getNamespace());
 
 
         var status = new SlotStatus();
         var spec = SlotSpec.builder()
-                           .nodeLabel(TEST_NODE_LABEL_1)
-                           .slotsPerNode(4)
-                           .resourcesPerSlot(Map.of("cpu", new Quantity("900m"), "memory", new Quantity("4Gi")))
+                           .nodeLabel(configuration.labelName)
+                           .slotsPerNode(configuration.slotsPerNode)
+                           .resourcesPerSlot(configuration.resourcesPerSlot)
                            .build();
 
-        status.setState(SUCCESS);
-
-        var slots = enumerate(Arrays.asList(TEST_NODE_NAMES)).flatMap(pair -> {
-            var nodeName = pair.getKey();
-            var nodeId = pair.getValue();
-            return IntStream.range(0, 4).mapToObj(slotPositionOnNode -> new SlotOccupationStatus(
-                    SlotState.FREE,
-                    MessageFormat.format(GHOST_POD_PATTER, nodeName, slotPositionOnNode + ""),
-                    nodeName,
-                    nodeId,
-                    slotPositionOnNode,
-                    UUID.randomUUID().toString()
-            ));
-        }).collect(Collectors.toList());
-
-        status.setSlots(slots);
-        slot.setStatus(status);
         slot.setSpec(spec);
-        slot = client.resources(Slot.class).inNamespace(name.getNamespace()).create(slot);
 
-        slot.setStatus(status);
-        slot = client.resources(Slot.class).inNamespace(name.getNamespace()).replaceStatus(slot);
-        assertThat(slot.getStatus().getSlots()).isNotNull();
+        slot = client.resources(Slot.class).inNamespace(configuration.namespace).create(slot);
+        if (configuration.mock) {
+            status.setState(SUCCESS);
+
+            var slots = enumerate(configuration.nodeNames).flatMap(pair -> {
+                var nodeName = pair.getKey();
+                var nodeId = pair.getValue();
+                return IntStream.range(0, configuration.slotsPerNode).mapToObj(slotPositionOnNode ->
+                        new SlotOccupationStatus(
+                                SlotState.FREE,
+                                MessageFormat.format(GHOST_POD_PATTER, nodeName, slotPositionOnNode + ""),
+                                nodeName,
+                                nodeId,
+                                slotPositionOnNode,
+                                UUID.randomUUID().toString()
+                        ));
+            }).collect(Collectors.toList());
+
+            status.setSlots(slots);
+            slot.setStatus(status);
+            slot.setSpec(spec);
+
+
+            slot.setStatus(status);
+            slot = client.resources(Slot.class).inNamespace(configuration.namespace).replaceStatus(slot);
+            assertThat(slot.getStatus().getSlots()).isNotNull();
+        }
+        else {
+            enumerate(configuration.nodeNames)
+                    .forEach(p -> addLabelToNode(p.getKey(), configuration.labelName, p.getValue() + ""));
+        }
+
 
         return slot;
     }
@@ -311,7 +350,7 @@ public abstract class BaseReconcilerTest {
                 .withNewStatus()
                 .addToAllocatable(Map.of(
                         "cpu", new Quantity("2000m"),
-                        "memory", new Quantity("4Gi")
+                        "memory", new Quantity("20Gi")
                 ))
                 .endStatus()
                 .build();
@@ -324,7 +363,7 @@ public abstract class BaseReconcilerTest {
         assertThat(node).as("Node " + nodeName + " does not exist!").isNotNull();
 
         node.getMetadata().getLabels().put(label, value);
-        return client.nodes().patch(node);
+        return client.nodes().withName(nodeName).patch(node);
     }
 
     protected Node removeLabelFromNode(String nodeName, String label) {
@@ -332,7 +371,22 @@ public abstract class BaseReconcilerTest {
         assertThat(node).as("Node " + nodeName + " does not exist!").isNotNull();
 
         node.getMetadata().getLabels().remove(label);
-        return client.nodes().patch(node);
+        return client.nodes().withName(nodeName).patch(node);
+    }
+
+    protected void assertJobConditions(String jobName, Set<String> falseCondition, Set<String> trueConditions) {
+        await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
+            var job = getJob(jobName);
+            List<Tuple> conditions = new ArrayList<>();
+            falseCondition.stream().map(fc -> Tuple.tuple(fc, false)).forEach(conditions::add);
+            trueConditions.stream().map(tc -> Tuple.tuple(tc, true)).forEach(conditions::add);
+
+
+            assertThat(job.getStatus().getConditions())
+                    .extracting("condition", "value")
+                    .as("Job does not have the expected conditions")
+                    .containsAll(conditions);
+        });
     }
 
     protected void createPod(NamespacedName podName, Map<String, String> labels, String nodeName) {
@@ -371,6 +425,187 @@ public abstract class BaseReconcilerTest {
                 .endSpec()
                 .build());
 
+    }
+
+    protected Scheduling getScheduling(String name) {
+        var scheduling = client.resources(Scheduling.class).inNamespace(NAMESPACE).withName(name).get();
+
+        assertThat(scheduling).isNotNull();
+
+        return scheduling;
+    }
+
+    protected void assertSchedulingState(String schedulingName, SchedulingState state) {
+        await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
+            var scheduling = getScheduling(TEST_SCHEDULING);
+            assertThat(scheduling.getStatus().getState()).isEqualTo(state);
+        });
+    }
+
+    protected void assertSchedulingConditions(String schedulingName,
+                                              Set<String> falseCondition,
+                                              Set<String> trueConditions) {
+        await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
+            var scheduling = getScheduling(schedulingName);
+            List<Tuple> conditions = new ArrayList<>();
+            falseCondition.stream().map(fc -> Tuple.tuple(fc, false)).forEach(conditions::add);
+            trueConditions.stream().map(tc -> Tuple.tuple(tc, true)).forEach(conditions::add);
+
+
+            assertThat(scheduling.getStatus().getConditions())
+                    .extracting("condition", "value")
+                    .as("Job does not have the expected conditions")
+                    .containsAll(conditions);
+        });
+    }
+
+    protected List<FlinkCluster> getFlinkApplications() {
+        var flinks = client.resources(FlinkCluster.class).inNamespace(NAMESPACE).list();
+        return flinks.getItems();
+    }
+
+    protected List<SparkApplication> getSparkApplications() {
+        var sparks = client.resources(SparkApplication.class).inNamespace(NAMESPACE).list();
+        return sparks.getItems();
+    }
+
+    @SneakyThrows
+    protected String createJob(String filename) {
+        var job = new ObjectMapper(new YAMLFactory())
+                .readValue(new FileInputStream("src/main/resources/jobs/" + filename), BatchJob.class);
+
+        job.getMetadata().setNamespace(NAMESPACE);
+
+        job = client.resources(BatchJob.class).inNamespace(NAMESPACE).create(job);
+        assertThat(job).isNotNull();
+
+        return job.getMetadata().getName();
+    }
+
+    protected void mockFlinkPods(String jobName, int replication) {
+        for (int i = 0; i < replication; i++) {
+            createPod(new NamespacedName("flink-TM-pod" + i, NAMESPACE), Map.of(
+                    "cluster", jobName, "component", "taskmanager", // Flink
+                    //Slot
+                    SLOT_POD_SLOT_ID_NAME, "" + i,
+                    SLOT_POD_LABEL_NAME, TEST_SLOT_NAME_1,
+                    SLOT_POD_IS_GHOSTPOD_NAME, "false",
+                    SLOT_POD_TARGET_NODE_NAME, TEST_NODE_NAMES[i % TEST_NODE_NAMES.length]
+            ), TEST_NODE_NAMES[i % TEST_NODE_NAMES.length]);
+        }
+    }
+
+    protected void mockSparkPods(String jobName, int replication) {
+        for (int i = 0; i < replication; i++) {
+            createPod(new NamespacedName("spark-executor-pod" + i, NAMESPACE), Map.of(
+                    "sparkoperator.k8s.io/app-name", jobName, "spark-role", "executor", // Spark
+                    //Slot
+                    SLOT_POD_SLOT_ID_NAME, "" + i,
+                    SLOT_POD_LABEL_NAME, TEST_SLOT_NAME_1,
+                    SLOT_POD_IS_GHOSTPOD_NAME, "false",
+                    SLOT_POD_TARGET_NODE_NAME, TEST_NODE_NAMES[i % TEST_NODE_NAMES.length]
+            ), TEST_NODE_NAMES[i % TEST_NODE_NAMES.length]);
+        }
+    }
+
+    protected void createSparkPods(String jobName, PodInSlotsConfiguration configuration) {
+        var config = configuration.toBuilder()
+                                  .additionalLabels(Map.of(
+                                          "sparkoperator.k8s.io/app-name", jobName,
+                                          "spark-role", "executor"))
+                                  .build();
+
+        createPodInSlots(config);
+    }
+
+    protected void createPodInSlots(PodInSlotsConfiguration configuration) {
+        for (int i = 0; i < configuration.getSlotIds().size(); i++) {
+
+            var labels = new HashMap<>(Map.of(
+                    SLOT_POD_LABEL_NAME, configuration.getSlotName(),
+                    SLOT_POD_IS_GHOSTPOD_NAME, "false",
+                    SLOT_IDS_NAME, SlotIDsAnnotationString.ofIds(configuration.getSlotIds()).toString()));
+
+            labels.putAll(configuration.getAdditionalLabels());
+
+            createPod(new NamespacedName(configuration.getPrefix() + i, configuration.getNamespace()),
+                    labels,
+                    null,
+                    Map.of("cpu", new Quantity(configuration.getCpu()), "memory", new Quantity("4Gi")),
+                    List.of(
+                            new NodeSelectorTermBuilder()
+                                    .withMatchExpressions(new NodeSelectorRequirement(
+                                            configuration.getLabelName(),
+                                            "In",
+                                            configuration.getNodeLabelValues()))
+                                    .build()
+
+                    )
+            );
+        }
+    }
+
+    @Builder
+    @Value
+    protected static class SlotConfiguration {
+        @Builder.Default
+        String namespace = NAMESPACE;
+        @Builder.Default
+        String name = TEST_SLOT_NAME_1;
+        @Builder.Default
+        String labelName = TEST_NODE_LABEL_1;
+        @Builder.Default
+        int slotsPerNode = 4;
+        @Builder.Default
+        Map<String, Quantity> resourcesPerSlot = Map.of("cpu", new Quantity("900m"), "memory", new Quantity("4Gi"));
+
+        @Builder.Default
+        boolean mock = true;
+        @Builder.Default
+        List<String> nodeNames = Arrays.asList(TEST_NODE_NAMES);
+
+    }
+
+    @Builder(toBuilder = true)
+    @Value
+    protected static class PodInSlotsConfiguration {
+        @Builder.Default
+        String namespace = NAMESPACE;
+
+        @Builder.Default
+        String slotName = TEST_SLOT_NAME_1;
+
+        @Builder.Default
+        int replication = 4;
+
+        @Builder.Default
+        String prefix = "Executor-";
+
+        @Builder.Default
+        String labelName = TEST_NODE_LABEL_1;
+
+        @Builder.Default
+        String cpu = "1000m";
+
+        @Builder.Default
+        Map<String, String> additionalLabels = emptyMap();
+
+        Set<Integer> slotIds;
+        List<String> nodeLabelValues;
+
+        public Set<Integer> getSlotIds() {
+            if (slotIds == null) return IntStream.range(0, replication).boxed()
+                                                 .collect(Collectors.toSet());
+            return slotIds;
+        }
+
+        public List<String> getNodeLabelValues() {
+            if (nodeLabelValues == null)
+                return getSlotIds().stream().map(i -> i % TEST_NODE_NAMES.length).map(String::valueOf)
+                                   .distinct().collect(Collectors.toList());
+
+            return nodeLabelValues;
+        }
     }
 
 

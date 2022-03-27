@@ -1,7 +1,7 @@
 package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.spark;
 
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.ApplicationSpecific;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import k8s.sparkoperator.SparkApplication;
@@ -12,6 +12,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
 @RequiredArgsConstructor
 public class SparkApplicationProvider implements ApplicationSpecific {
@@ -25,6 +27,13 @@ public class SparkApplicationProvider implements ApplicationSpecific {
     private final Set<String> runningState = Set.of(
             SparkApplicationStatusState.RunningState.getState()
     );
+
+    private final Set<String> failedState = Set.of(
+            SparkApplicationStatusState.FailedState.getState(),
+            SparkApplicationStatusState.FailedSubmissionState.getState(),
+            SparkApplicationStatusState.FailingState.getState()
+    );
+
     private List<Pod> pods = null;
     private SparkApplication cache = null;
 
@@ -43,8 +52,14 @@ public class SparkApplicationProvider implements ApplicationSpecific {
             return false;
         }
 
-        return runningState.contains(getApplication().getStatus().getApplicationState().getState().getState());
+        var applicationRunning =
+                runningState.contains(getApplication().getStatus().getApplicationState().getState().getState());
 
+
+        var allExecutorsRunning = getNullSafe(() -> getApplication().getStatus().getExecutorState().values().stream()
+                                                                    .allMatch(runningState::contains)).orElse(false);
+
+        return applicationRunning && allExecutorsRunning;
     }
 
     @Override
@@ -77,6 +92,12 @@ public class SparkApplicationProvider implements ApplicationSpecific {
               .inNamespace(name.getNamespace())
               .withName(name.getName())
               .delete();
+    }
+
+
+    @Override
+    public boolean isFailed() {
+        return failedState.contains(getApplication().getStatus().getApplicationState().getState());
     }
 
     @Override

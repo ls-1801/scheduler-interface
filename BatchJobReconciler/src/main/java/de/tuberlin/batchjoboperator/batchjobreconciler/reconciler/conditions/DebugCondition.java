@@ -50,7 +50,7 @@ public class DebugCondition extends BatchJobCondition {
     @Override
     protected boolean updateInternal(BatchJobContext context) {
         var current = context.getApplication().getApplication();
-        var old = mostRecentApplication.updateIfNewerAndReturnOld(current);
+        var old = current != null ? mostRecentApplication.updateIfNewerAndReturnOld(current) : null;
         if (resourceVersionChanged(old, current)) {
             return false;
         }

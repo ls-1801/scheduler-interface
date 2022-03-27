@@ -20,6 +20,10 @@ public class AwaitCompletionCondition extends BatchJobCondition {
 
     @Override
     protected boolean updateInternal(BatchJobContext context) {
+        if (context.getApplication().isFailed()) {
+            return error("Application has failed");
+        }
+
         return getNullSafe(context.getApplication()::isCompleted).orElse(false);
     }
 }

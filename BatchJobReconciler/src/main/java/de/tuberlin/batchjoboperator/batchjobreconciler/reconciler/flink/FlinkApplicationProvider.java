@@ -1,7 +1,7 @@
 package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.flink;
 
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.ApplicationSpecific;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import k8s.flinkoperator.FlinkCluster;
@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @RequiredArgsConstructor
@@ -86,5 +87,10 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
         client.resources(FlinkCluster.class).inNamespace(name.getNamespace())
               .withName(name.getName())
               .delete();
+    }
+
+    @Override
+    public boolean isFailed() {
+        return Objects.equals(getApplication().getStatus().getState(), "Failed");
     }
 }

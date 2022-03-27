@@ -1,6 +1,6 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.external;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import lombok.Value;
 
 import java.util.List;

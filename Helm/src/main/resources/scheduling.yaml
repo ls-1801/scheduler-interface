@@ -1,35 +1,35 @@
-apiVersion: batchjob.gcr.io/v1alpha1
-kind: Scheduling
-metadata:
-  name: scheduling
-spec:
-  slots:
-    name: batchjob-slots
-    namespace: default
-  slotBased:
-    mode: strict
-    jobs:
-      - name:
-          name: batchjob-sample
-          namespace: default
-        slotIds: [ 0,1 ]
-      - name:
-          name: batchjob-flink
-          namespace: default
-        slotIds: [ 0,1 ]
+#apiVersion: batchjob.gcr.io/v1alpha1
+#kind: Scheduling
+#metadata:
+#  name: scheduling
+#spec:
+#  slots:
+#    name: batchjob-slots
+#    namespace: default
+#  slotBased:
+#    mode: strict
+#    jobs:
+#      - name:
+#          name: batchjob-sample
+#          namespace: default
+#        slotIds: [ 0,1 ]
+#      - name:
+#          name: batchjob-flink
+#          namespace: default
+#        slotIds: [ 0,1 ]
 ---
 apiVersion: batchjob.gcr.io/v1alpha1
 kind: Scheduling
 metadata:
-  name: profiler-scheduling
+  name: test-scheduling
 spec:
   slots:
-    name: profiler-slots
+    name: batchjob-slots
     namespace: default
   queueBased:
-    - name: batchjob-flink2
+    - name: spark-crawler
       namespace: default
-    - name: batchjob-flink3
+    - name: spark-crawler
       namespace: default
 #      slots
 #  queueBased:

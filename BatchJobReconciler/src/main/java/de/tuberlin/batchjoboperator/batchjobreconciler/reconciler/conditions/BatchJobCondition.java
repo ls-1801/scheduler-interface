@@ -2,14 +2,14 @@ package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.BatchJobContext;
-import de.tuberlin.batchjoboperator.common.Condition;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.AbstractBatchJobCondition;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
+import de.tuberlin.batchjoboperator.common.statemachine.Condition;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -57,7 +57,7 @@ public abstract class BatchJobCondition extends AbstractBatchJobCondition implem
 
         if (value != result) {
             log.debug("Condition: {} has changed", getCondition());
-            lastUpdateTimestamp = LocalDateTime.now().toString();
+            lastUpdateTimestamp = Instant.now().toString();
             value = result;
         }
     }
@@ -65,7 +65,7 @@ public abstract class BatchJobCondition extends AbstractBatchJobCondition implem
     protected boolean error(String problem) {
         log.error("Condition {} got an error: \n{}\n", getCondition(), problem);
         if (!problem.equals(error)) {
-            lastUpdateTimestamp = LocalDateTime.now().toString();
+            lastUpdateTimestamp = Instant.now().toString();
         }
 
         this.error = problem;

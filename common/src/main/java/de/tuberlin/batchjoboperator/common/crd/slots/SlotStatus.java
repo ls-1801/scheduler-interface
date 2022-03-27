@@ -1,6 +1,5 @@
 package de.tuberlin.batchjoboperator.common.crd.slots;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
 import io.javaoperatorsdk.operator.api.ObservedGenerationAwareStatus;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,9 +31,6 @@ public class SlotStatus extends ObservedGenerationAwareStatus {
 
     @Nullable
     private String schedulingInProgressTimestamp;
-
-    @Nullable
-    private List<NamespacedName> currentScheduling;
 
 
     public void addProblem(String problem) {

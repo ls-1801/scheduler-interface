@@ -8,7 +8,9 @@ import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import io.javaoperatorsdk.operator.Operator;
+import io.javaoperatorsdk.operator.api.config.ControllerConfigurationOverrider;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,6 +18,9 @@ import java.util.List;
 
 @Configuration
 public class Config {
+
+    @Value("${NAMESPACE:default}")
+    private String namespace;
 
     @Bean
     public SchedulingReconciler schedulingReconciler(KubernetesClient client) {
@@ -44,10 +49,14 @@ public class Config {
     public Operator operator(List<Reconciler> controllers, ObjectMapper objectMapper) {
         var configService = new CustomClonerConfigurationService(objectMapper);
         Operator operator = new Operator(configService);
-        controllers.forEach(c -> {
-            var controllerConfiguration = configService.getConfigurationFor(c);
+        controllers.forEach(controller -> {
+            var controllerConfiguration = configService.getConfigurationFor(controller);
             controllerConfiguration.setConfigurationService(configService);
-            operator.register(c, controllerConfiguration);
+            var overrideNamespace = ControllerConfigurationOverrider.override(controllerConfiguration)
+                                                                    .settingNamespace(namespace)
+                                                                    .build();
+
+            operator.register(controller, overrideNamespace);
         });
         return operator;
     }

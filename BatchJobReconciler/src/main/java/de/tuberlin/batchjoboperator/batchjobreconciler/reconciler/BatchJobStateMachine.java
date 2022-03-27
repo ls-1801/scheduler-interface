@@ -1,9 +1,11 @@
 package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler;
 
-import de.tuberlin.batchjoboperator.common.OnCondition;
-import de.tuberlin.batchjoboperator.common.State;
-import de.tuberlin.batchjoboperator.common.StateMachine;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
+import de.tuberlin.batchjoboperator.common.statemachine.OnCondition;
+import de.tuberlin.batchjoboperator.common.statemachine.State;
+import de.tuberlin.batchjoboperator.common.statemachine.StateMachine;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.BatchJobCondition.AWAIT_COMPLETION_CONDITION;
@@ -22,6 +24,7 @@ import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.Run
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.ScheduledState;
 
 @Slf4j
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class BatchJobStateMachine {
     public static final StateMachine<BatchJobContext> STATE_MACHINE = StateMachine.of(
 
@@ -88,8 +91,8 @@ public class BatchJobStateMachine {
                                              .subState(
                                                      State.<BatchJobContext>withName(BatchJobState.SubmittedState.name())
                                                           .condition(OnCondition.any(
-                                                                  (conditions, context) -> log.info("All Pods Are " +
-                                                                          "scheduled"),
+                                                                  (conditions, context) ->
+                                                                          log.info("All Pods Are scheduled"),
                                                                   ScheduledState.name(),
                                                                   AWAIT_POD_SCHEDULED_CONDITION
                                                           ))
@@ -123,7 +126,15 @@ public class BatchJobStateMachine {
                               // not explicitly creating Conditions for all kinds of Errors. Conditions can return an
                               // error which will be picked up by the State machine and cause transition to the closest
                               // parent ErrorState or the defaultErrorState defined by the StateMachine
-                              .errorState(State.<BatchJobContext>withName(BatchJobState.FailedState.name())
+                              .errorState(State.<BatchJobContext>withName(BatchJobState.FailedSubmissionState.name())
+                                               .condition(OnCondition.all(
+                                                       (cs, c) -> {
+                                                           log.info("Recover from FailedSubmissionState");
+                                                       },
+                                                       ReadyState.name(),
+                                                       AWAIT_RELEASE_CONDITION,
+                                                       AWAIT_DELETION_CONDITION
+                                               ))
                                                .build())
                               .condition(OnCondition.all(
                                       // None Of these will be called, since debug is always false

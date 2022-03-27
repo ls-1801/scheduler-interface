@@ -7,25 +7,45 @@
         <artifactId>BatchJobOperator</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
+
     <packaging>jar</packaging>
-    <groupId>de.tuberlin</groupId>
     <artifactId>BatchJobReconciler</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>BatchJobReconciler</name>
     <description>BatchJobReconciler</description>
-    <properties>
-        <java.version>11</java.version>
-    </properties>
 
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>spring-boot-plugin</id>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>${jib-maven-plugin.version}</version>
+                <configuration>
+                    <from>
+                        <image>gcr.io/distroless/java:11</image>
+                    </from>
+                    <to>
+                        <image>${build.image.registry}/batchjob-operator</image>
+                    </to>
+                </configuration>
             </plugin>
         </plugins>
     </build>
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>de.tuberlin</groupId>
             <artifactId>common</artifactId>

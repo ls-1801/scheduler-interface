@@ -5,9 +5,9 @@ public enum SchedulingState {
     InitialState,
     AcquireState,
     CompletedState,
+    ConfirmationState,
     FinishedState,
     SubmissionState,
-    ConfirmationState,
     AwaitingCompletionState,
     Error
 }

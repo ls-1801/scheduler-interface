@@ -1,18 +1,18 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler.statemachine;
 
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.JobConditionValue;
-import de.tuberlin.batchjoboperator.common.crd.slots.SlotIDsAnnotationString;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_SLOT_IDS;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
 @Slf4j
@@ -44,11 +44,8 @@ public class AwaitJobsScheduledCondition extends SchedulingCondition {
         var job = context.getJob(jobValue.getName());
         log.debug("Job {} State {}", jobValue.getName(), job.getStatus().getState());
 
-        /*
-         * Once a Job is Running or even Completed, Slot State is guaranteed to be updated. Checking it again might,
-         * even
-         * show them being free again as the job may have already completed
-         * */
+        // Once a Job is Running or even Completed, Slot State is guaranteed to be updated. Checking it again might,
+        //even show them being free again as the job may have already completed
         if (definitelyPastScheduledStates.contains(job.getStatus().getState())) {
             return true;
         }
@@ -62,15 +59,12 @@ public class AwaitJobsScheduledCondition extends SchedulingCondition {
         // the BatchJob is in the scheduled state
         var freeSlots = context.getFreeSlots();
         log.debug("FreeSlots: {}", freeSlots);
-        var jobSlotIdsLabel = job.getMetadata().getLabels()
-                                 .get(APPLICATION_CREATION_REQUEST_SLOT_IDS);
-
-        var desiredSlots =
-                SlotIDsAnnotationString.parse(jobSlotIdsLabel);
+        var desiredSlots = getNullSafe(() -> job.getSpec().getCreationRequest().getSlotIds())
+                .orElseThrow(() -> new RuntimeException("Missing SlotIds in CreationRequest"));
 
 
         log.debug("Jobs should haven been scheduled onto slots: {}", desiredSlots);
-        var slotsNotUpdated = desiredSlots.getSlotIds().stream()
+        var slotsNotUpdated = desiredSlots.stream()
                                           .anyMatch(freeSlots::contains);
 
         return !slotsNotUpdated;
@@ -78,10 +72,13 @@ public class AwaitJobsScheduledCondition extends SchedulingCondition {
 
     @Override
     protected boolean updateInternal(SchedulingContext context) {
+        if (checkTimeout(Duration.of(2, ChronoUnit.MINUTES))) {
+            return error("Timeout Exceeded when waiting for jobs to be scheduled");
+        }
+
         var newJobs = context.getJobsSubmittedDuringCurrentCycle();
         Objects.requireNonNull(this.jobs)
                .addAll(newJobs.stream().map(n -> new JobConditionValue(n, false)).collect(Collectors.toSet()));
-
 
         log.debug("Testing if all jobs have been scheduled: {}", this.jobs);
         this.jobs = this.jobs.stream()
@@ -114,7 +111,7 @@ public class AwaitJobsScheduledCondition extends SchedulingCondition {
     @Override
     public void initialize(SchedulingContext context) {
         super.initialize(context);
-        var jobs = context.getJobsSubmittedDuringCurrentCycle();
-        this.jobs = jobs.stream().map(n -> new JobConditionValue(n, false)).collect(Collectors.toSet());
+        var newJobsSubmitted = context.getJobsSubmittedDuringCurrentCycle();
+        this.jobs = newJobsSubmitted.stream().map(n -> new JobConditionValue(n, false)).collect(Collectors.toSet());
     }
 }

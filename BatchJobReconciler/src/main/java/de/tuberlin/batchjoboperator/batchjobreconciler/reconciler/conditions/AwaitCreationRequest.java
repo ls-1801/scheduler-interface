@@ -2,7 +2,7 @@ package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.BatchJobContext;
-import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.CreationRequest;
+import de.tuberlin.batchjoboperator.common.crd.batchjob.CreationRequest;
 import de.tuberlin.batchjoboperator.common.crd.slots.SlotsStatusState;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,7 +28,7 @@ public class AwaitCreationRequest extends BatchJobCondition {
 
     @Override
     protected boolean updateInternal(BatchJobContext context) {
-        var creationRequestOpt = getNullSafe(() -> CreationRequest.fromLabels(job.getMetadata().getLabels()));
+        var creationRequestOpt = getNullSafe(() -> context.getResource().getSpec().getCreationRequest());
 
         if (creationRequestOpt.isEmpty())
             return false;

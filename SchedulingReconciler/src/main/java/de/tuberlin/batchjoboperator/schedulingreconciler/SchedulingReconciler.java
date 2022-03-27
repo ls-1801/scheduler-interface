@@ -1,15 +1,15 @@
 package de.tuberlin.batchjoboperator.schedulingreconciler;
 
-import de.tuberlin.batchjoboperator.common.UpdateResult;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.AbstractSchedulingJobCondition;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.Scheduling;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.SchedulingState;
 import de.tuberlin.batchjoboperator.common.crd.slots.Slot;
+import de.tuberlin.batchjoboperator.common.statemachine.UpdateResult;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingConditionProvider;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingContext;
 import de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.SchedulingStateMachine;
-import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
@@ -26,9 +26,10 @@ import io.javaoperatorsdk.operator.processing.event.source.informer.InformerEven
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.CollectionUtils;
 
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,11 +37,8 @@ import java.util.stream.Collectors;
 
 import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAMESPACE;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_REPLICATION;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_SLOTS_NAME;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_SLOTS_NAMESPACE;
-import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.APPLICATION_CREATION_REQUEST_SLOT_IDS;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
+import static java.util.stream.Collectors.toSet;
 
 @ControllerConfiguration
 @RequiredArgsConstructor
@@ -48,79 +46,37 @@ import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 public class SchedulingReconciler implements Reconciler<Scheduling>, EventSourceInitializer<Scheduling> {
 
     private final KubernetesClient client;
+    private Set<ResourceID> schedulings = new HashSet<>();
 
-
-    public <T extends HasMetadata> Set<ResourceID> fromLabels(T hasMetadata) {
-        if (hasMetadata.getMetadata().getLabels() == null) {
-            log.warn("{}/{} does not have labels", hasMetadata.getMetadata().getName(), hasMetadata.getKind());
-            return Collections.emptySet();
-        }
-
-        var name = hasMetadata.getMetadata().getLabels().get(ACTIVE_SCHEDULING_LABEL_NAME);
-        var namespace = hasMetadata.getMetadata().getLabels().get(ACTIVE_SCHEDULING_LABEL_NAMESPACE);
-
-        if (name == null || namespace == null) {
-            log.warn("{}/{} does not have all labels", hasMetadata.getMetadata().getName(), hasMetadata.getKind());
-            return Collections.emptySet();
-        }
-
-        return Set.of(new ResourceID(name, namespace));
-    }
+    @Value("${NAMESPACE:default}")
+    private String namespace;
 
     @Override
     public List<EventSource> prepareEventSources(EventSourceContext<Scheduling> context) {
+
+        log.info("Watching Batch Jobs and Testbeds in namespace: {}", namespace);
+
+        this.schedulings =
+                client.resources(Scheduling.class).inNamespace(namespace).list().getItems().stream()
+                      .map(ResourceID::fromResource)
+                      .collect(toSet());
+
         SharedIndexInformer<BatchJob> batchJobInformer =
                 client.resources(BatchJob.class)
-                      .inAnyNamespace()
-                      .runnableInformer(0);
+                      .inNamespace(namespace)
+                      .runnableInformer(1000);
 
         SharedIndexInformer<Slot> slotsInformer =
                 client.resources(Slot.class)
-                      .inAnyNamespace()
-                      .runnableInformer(0);
+                      .inNamespace(namespace)
+                      .runnableInformer(1000);
 
         return List.of(
-                new InformerEventSource<>(batchJobInformer, this::fromLabels),
-                new InformerEventSource<>(slotsInformer, this::fromLabels)
+                new InformerEventSource<>(batchJobInformer, (k) -> this.schedulings),
+                new InformerEventSource<>(slotsInformer, (k) -> this.schedulings)
         );
     }
 
-    private void removeLabelsFromSlot(Slot slot) {
-        if (slot.getMetadata().getLabels() == null) {
-            return;
-        }
-
-        slot.getMetadata().getLabels().remove(ACTIVE_SCHEDULING_LABEL_NAME);
-        slot.getMetadata().getLabels().remove(ACTIVE_SCHEDULING_LABEL_NAMESPACE);
-        client.resources(Slot.class).inNamespace(slot.getMetadata().getNamespace()).patch(slot);
-    }
-
-
-    private void removeLabelsFromJob(BatchJob job) {
-        if (job.getMetadata().getLabels() == null) {
-            return;
-        }
-
-        client.resources(BatchJob.class)
-              .inNamespace(job.getMetadata().getNamespace())
-              .withName(job.getMetadata().getName())
-              .edit((editJob) -> {
-                  if (editJob.getMetadata().getLabels() == null) {
-                      return editJob;
-                  }
-
-                  editJob.getMetadata().getLabels().remove(ACTIVE_SCHEDULING_LABEL_NAME);
-                  editJob.getMetadata().getLabels().remove(ACTIVE_SCHEDULING_LABEL_NAMESPACE);
-                  editJob.getMetadata().getLabels().remove(APPLICATION_CREATION_REQUEST_SLOTS_NAME);
-                  editJob.getMetadata().getLabels().remove(APPLICATION_CREATION_REQUEST_SLOTS_NAMESPACE);
-                  editJob.getMetadata().getLabels().remove(APPLICATION_CREATION_REQUEST_SLOT_IDS);
-                  editJob.getMetadata().getLabels().remove(APPLICATION_CREATION_REQUEST_REPLICATION);
-
-                  return editJob;
-              });
-
-
-    }
 
     private UpdateControl<Scheduling> handleError(Scheduling resource, Context context,
                                                   UpdateResult<SchedulingContext> newStatus) {
@@ -136,7 +92,7 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
 
         if (lastAttempt) {
             resource.getStatus().setConditions(newStatus.getNewConditions().stream()
-                                                        .map(a -> (AbstractSchedulingJobCondition) a)
+                                                        .map(AbstractSchedulingJobCondition.class::cast)
                                                         .collect(Collectors.toSet()));
             resource.getStatus().setState(SchedulingState.valueOf(newStatus.getNewState()));
             resource.getStatus().setProblems(List.of(newStatus.getError()));
@@ -156,19 +112,33 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
         log.debug("Reconciling Scheduling: {}", resource.getMetadata().getName());
         log.debug("RV:         {}", resource.getMetadata().getResourceVersion());
         log.debug("Status:     {}", resource.getStatus().getState());
+        if (resource.getStatus().getState() == SchedulingState.FailedState) {
+            log.debug("Error:     {}", resource.getStatus().getProblems());
+        }
         log.debug("Jobs:       {}", resource.getStatus().getJobStates());
         log.debug("Conditions: {}",
-                getNullSafe(() -> resource.getStatus().getConditions().stream().map(c -> c.getCondition())
+                getNullSafe(() -> resource.getStatus().getConditions().stream()
+                                          .map(AbstractSchedulingJobCondition::getCondition)
                                           .collect(Collectors.toSet())));
+
+        log.debug("Slot:       {}", context.getSecondaryResource(Slot.class).orElse(null));
+        log.debug("Job:        {}", context.getSecondaryResource(BatchJob.class).orElse(null));
 
         log.debug("RetryCount/LastAttempt: {}", context.getRetryInfo()
                                                        .map(r -> Pair.of(r.getAttemptCount(), r.isLastAttempt()))
                                                        .orElse(null));
     }
 
+    private void addToResources(Scheduling scheduling) {
+        this.schedulings.add(ResourceID.fromResource(scheduling));
+    }
+
+
     @Override
     public UpdateControl<Scheduling> reconcile(Scheduling resource, Context context) {
         debugLog(resource, context);
+        addToResources(resource);
+
         var stateMachineContext = new SchedulingContext(resource, client);
         var conditionProvider = new SchedulingConditionProvider(stateMachineContext);
 
@@ -197,14 +167,15 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
 
         // Update State and Conditions
         resource.getStatus().setConditions(newStatus.getNewConditions().stream()
-                                                    .map(a -> (AbstractSchedulingJobCondition) a)
+                                                    .map(AbstractSchedulingJobCondition.class::cast)
                                                     .collect(Collectors.toSet()));
 
         resource.getStatus().setState(SchedulingState.valueOf(newStatus.getNewState()));
 
         log.debug("StateMachine did advance to");
         log.debug("New State: {}", newStatus.getNewState());
-        log.debug("New Conditions: {}", resource.getStatus().getConditions().stream().map(c -> c.getCondition())
+        log.debug("New Conditions: {}", resource.getStatus().getConditions().stream()
+                                                .map(AbstractSchedulingJobCondition::getCondition)
                                                 .collect(Collectors.toSet()));
         log.debug("#".repeat(80));
 
@@ -215,20 +186,22 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
     @Override
     public DeleteControl cleanup(Scheduling resource, Context context) {
         log.info("Cleaning up for: {}", resource.getMetadata().getName());
-        client.resources(Slot.class).inAnyNamespace().withLabels(
+        var schedulingContext = new SchedulingContext(resource, client);
+        client.resources(Slot.class).inNamespace(namespace).withLabels(
                       Map.of(ACTIVE_SCHEDULING_LABEL_NAME,
                               resource.getMetadata().getName(),
                               ACTIVE_SCHEDULING_LABEL_NAMESPACE,
                               resource.getMetadata().getNamespace()))
-              .list().getItems().forEach(this::removeLabelsFromSlot);
+              .list().getItems().stream()
+              .map(NamespacedName::of)
+              .forEach(schedulingContext::releaseTestbedIfClaimed);
 
-        client.resources(BatchJob.class).inAnyNamespace().withLabels(
-                      Map.of(ACTIVE_SCHEDULING_LABEL_NAME,
-                              resource.getMetadata().getName(),
-                              ACTIVE_SCHEDULING_LABEL_NAMESPACE,
-                              resource.getMetadata().getNamespace()))
-              .list().getItems().forEach(this::removeLabelsFromJob);
+        client.resources(BatchJob.class).inNamespace(namespace).list()
+              .getItems().stream()
+              .map(NamespacedName::of)
+              .forEach(schedulingContext::releaseJobIfClaimed);
 
+        this.schedulings.remove(ResourceID.fromResource(resource));
         return Reconciler.super.cleanup(resource, context);
     }
 

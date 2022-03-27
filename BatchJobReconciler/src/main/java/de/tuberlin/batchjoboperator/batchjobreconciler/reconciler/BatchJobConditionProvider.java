@@ -1,9 +1,9 @@
 package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler;
 
 import de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions.BatchJobCondition;
-import de.tuberlin.batchjoboperator.common.Condition;
-import de.tuberlin.batchjoboperator.common.ConditionProvider;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJob;
+import de.tuberlin.batchjoboperator.common.statemachine.Condition;
+import de.tuberlin.batchjoboperator.common.statemachine.ConditionProvider;
 
 import java.util.Collections;
 import java.util.Map;

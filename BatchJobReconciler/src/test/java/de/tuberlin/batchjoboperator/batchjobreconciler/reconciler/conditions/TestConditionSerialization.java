@@ -2,7 +2,7 @@ package de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import de.tuberlin.batchjoboperator.common.NamespacedName;
+import de.tuberlin.batchjoboperator.common.crd.NamespacedName;
 import de.tuberlin.batchjoboperator.common.crd.batchjob.AbstractBatchJobCondition;
 import de.tuberlin.batchjoboperator.common.crd.scheduling.AbstractSchedulingJobCondition;
 import io.fabric8.kubernetes.client.utils.Serialization;
