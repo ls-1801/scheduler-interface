@@ -49,7 +49,7 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
     private Set<ResourceID> schedulings = new HashSet<>();
 
     @Value("${NAMESPACE:default}")
-    private String namespace;
+    private final String namespace;
 
     @Override
     public List<EventSource> prepareEventSources(EventSourceContext<Scheduling> context) {

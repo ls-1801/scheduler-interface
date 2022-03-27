@@ -21,7 +21,7 @@ public class Config {
 
     @Bean
     public TestbedReconciler TestbedReconciler(KubernetesClient client) {
-        return new TestbedReconciler(client);
+        return new TestbedReconciler(client, namespace);
     }
 
     @Bean

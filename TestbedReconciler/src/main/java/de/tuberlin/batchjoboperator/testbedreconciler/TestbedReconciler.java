@@ -80,7 +80,7 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
     private Map<String, ResourceID> slotsByName;
 
     @Value("${NAMESPACE:default}")
-    private String namespace;
+    private final String namespace;
 
 
     @Override
