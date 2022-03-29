@@ -28,6 +28,9 @@ public class JobRuntimeMatrix {
         this.matrix = matrix;
     }
 
+    /**
+     * Creates the Job matrix by accumulating previously stored profiler information.
+     */
     public static JobRuntimeMatrix buildMatrix(Collection<ExternalBatchJob> jobs) {
         var matrix = new HashMap<String, Map<String, JobRuntime>>();
 
@@ -47,6 +50,10 @@ public class JobRuntimeMatrix {
         return new JobRuntimeMatrix(matrix);
     }
 
+    /**
+     * Updates the runtime information of jobName when colocated with colocatedWith. This only updates the
+     * first job.
+     */
     public void updatePairing(String jobName, String colocatedWith, ScheduledEvents event) {
         matrix.computeIfAbsent(jobName, k -> new HashMap<>())
               .computeIfAbsent(colocatedWith, k -> new JobRuntime())
@@ -54,19 +61,22 @@ public class JobRuntimeMatrix {
 
     }
 
+    /**
+     * Finds a pairing with the least samples. If multiple pairings with the same sample size exist a pairing is
+     * chosen based on hashmap ordering.
+     */
     public Optional<Pair<String, String>> findPairingWithTheLeastSamples(Collection<String> names) {
         return names.stream().flatMap(name ->
                             names.stream().filter(coLocated -> !coLocated.equals(name)).map(coLocated -> Pair.of(name
                                     , coLocated)))
-                    .sorted(Comparator.comparingLong(p -> {
-                        return matrix.computeIfAbsent(p.getKey(), k -> new HashMap<>())
-                                     .computeIfAbsent(p.getValue(), k -> new JobRuntime())
-                                     .getNSamples();
-
-                    }))
-                    .findFirst();
+                    .min(Comparator.comparingLong(p -> matrix.computeIfAbsent(p.getKey(), k -> new HashMap<>())
+                                                             .computeIfAbsent(p.getValue(), k -> new JobRuntime())
+                                                             .getNSamples()));
     }
 
+    /**
+     * Update the BatchJob CR with the new profiler information
+     */
     public ExternalBatchJob updateBatchJob(ExternalBatchJob job) {
         this.matrix.getOrDefault(job.getName(), Collections.emptyMap()).forEach((coLocated, value) -> {
 
@@ -85,11 +95,8 @@ public class JobRuntimeMatrix {
     public Stream<String> findCoLocationWithTheLeastRuntime(String jobName) {
         var coLocations = matrix.getOrDefault(jobName, Collections.emptyMap());
         return coLocations.entrySet().stream()
-                          .sorted(Comparator.comparingLong(entry -> {
-                              return entry.getValue().getAverageRuntimeInSeconds();
-                          }))
+                          .sorted(Comparator.comparingLong(entry -> entry.getValue().getAverageRuntimeInSeconds()))
                           .map(Map.Entry::getKey);
-
 
     }
 
@@ -120,7 +127,7 @@ public class JobRuntimeMatrix {
             y++;
         }
 
-        table = Border.DOUBLE_LINE.apply(table);
+        table = Border.SINGLE_LINE.apply(table);
         Util.print(table);
     }
 }
