@@ -6,15 +6,18 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import k8s.flinkoperator.FlinkCluster;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static de.tuberlin.batchjoboperator.common.crd.NamespacedName.getName;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
 @RequiredArgsConstructor
+@Slf4j
 public class FlinkApplicationProvider implements ApplicationSpecific {
     private final KubernetesClient client;
     private final NamespacedName name;
@@ -61,8 +64,16 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
         if (!isExisting())
             return false;
 
-        return stateInSet(completedStates);
+        var isInCompletedState = stateInSet(completedStates);
 
+        var tms = getApplication().getStatus().getComponents().getTaskManagerStatefulSet().getState().equals("Deleted");
+        var jms = getApplication().getStatus().getComponents().getJobManagerStatefulSet().getState().equals("Deleted");
+
+        log.debug("Is {} Completed?, isInCompletedState: {}, tms: {}, jms: {}",
+                getName(getApplication()), isInCompletedState, tms, jms
+        );
+
+        return isInCompletedState && tms && jms;
     }
 
     @Override

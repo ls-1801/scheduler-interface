@@ -46,6 +46,11 @@ import static de.tuberlin.batchjoboperator.schedulingreconciler.statemachine.Sch
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/*
+ * This test is more complex as it is including all reconcilers and the Extender. Some of these Testcases are flaky,
+ * because they may crash the MockKubernetesServer, which im the current version suffers from concurrent
+ * modification exceptions. Version 6.0.0 fixes this issue.
+ * */
 @Slf4j
 public class SchedulingReconcilerTest extends BaseReconcilerTest {
 
@@ -158,6 +163,12 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
 
     }
 
+    /**
+     * This tests revealed a bug, where the QueueBased Strategy only waits for a specific number of slots available,
+     * however it the test case cannot stop all pods at once and the Testbed may reconcile in between thus marking
+     * only a single slot as free. This causes job 4 to sometimes use 0_3 because the first pod of job3 gets
+     * terminated and now 2 slots are already available for the scheduling if job 4
+     */
     @Test
     public void testLongQueue() {
         createSlot(SlotConfiguration.builder()
@@ -170,7 +181,6 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
         var job2 = createJob("sample3.yaml");
         var job3 = createJob("flink.yaml");
         var job4 = createJob("flink2.yaml");
-
 
         // Expected
         // 2, 1, 2, 1
@@ -468,15 +478,27 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
             return this;
         }
 
+        @SneakyThrows
         public void completes() {
+            IntStream.range(0, slotIds.size())
+                     .forEach(i -> client.pods().inNamespace(namespace).withName(podPrefix + i).editStatus(pod -> {
+                         pod.getStatus().setPhase("Succeeded");
+                         return pod;
+                     }));
+
+            Thread.sleep(300);
+
             client.resources(FlinkCluster.class).inNamespace(namespace).withName(name).editStatus((flinkCluster) -> {
                 flinkCluster.setStatus(
-                        new V1beta1FlinkClusterStatus().state("Stopped"));
+                        new V1beta1FlinkClusterStatus().state("Stopped")
+                                                       .components(new V1beta1FlinkClusterStatusComponents()
+                                                               .taskManagerStatefulSet(new V1beta1FlinkClusterStatusComponentsConfigMap().state("Deleted"))
+                                                               .jobManagerStatefulSet(new V1beta1FlinkClusterStatusComponentsConfigMap().state("Deleted")))
+                );
                 return flinkCluster;
             });
 
-            IntStream.range(0, slotIds.size())
-                     .forEach(i -> client.pods().inNamespace(namespace).withName(podPrefix + i).delete());
+
         }
 
 
@@ -548,11 +570,14 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
             return this;
         }
 
+        @SneakyThrows
         public void completes() {
             client.resources(SparkApplication.class).inNamespace(namespace).withName(name).editStatus((spark) -> {
                 spark.getStatus().getApplicationState().setState(SparkApplicationStatusState.CompletedState);
                 return spark;
             });
+
+            Thread.sleep(300);
 
             IntStream.range(0, slotIds.size())
                      .forEach(i -> client.pods().inNamespace(namespace).withName(podPrefix + i).delete());

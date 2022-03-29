@@ -13,6 +13,7 @@ import de.tuberlin.batchjoboperator.testbedreconciler.ClusterRequestedResources;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeListBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
@@ -151,6 +152,16 @@ class MockKubeScheduler {
                       updated.getSpec().setNodeName(targetNodeName);
                       return updated;
                   });
+            client.pods().inNamespace(pod.getMetadata().getNamespace())
+                  .withName(pod.getMetadata().getName()).editStatus(updated -> {
+                      if (updated.getStatus() == null) {
+                          updated.setStatus(new PodStatus());
+                      }
+
+                      updated.getStatus().setPhase("Running");
+
+                      return updated;
+                  });
             log.info("scheduled pod to node: {}", targetNodeName);
 
             return;
@@ -167,11 +178,12 @@ class MockKubeScheduler {
         var victimPodUid = General.requireFirstElement(result.getNodeNameToMetaVictims().entrySet())
                                   .getValue().getPods().get(0).getUid();
 
-        var victimPod =
-                client.pods().inAnyNamespace().list().getItems().stream()
-                      .filter(p -> victimPodUid.equals(p.getMetadata().getUid())).findFirst().get();
-
-        client.pods().inNamespace(victimPod.getMetadata().getNamespace()).delete(victimPod);
+        client.pods().inAnyNamespace().list().getItems().stream()
+              .filter(p -> victimPodUid.equals(p.getMetadata().getUid()))
+              .findFirst()
+              .ifPresent(victimPod -> {
+                  client.pods().inNamespace(victimPod.getMetadata().getNamespace()).delete(victimPod);
+              });
 
         filterNodes(pod, retries + 1);
     }
