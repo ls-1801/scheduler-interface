@@ -20,7 +20,7 @@
         <dependency>
             <groupId>de.tuberlin</groupId>
             <artifactId>common</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
@@ -40,7 +40,7 @@
                             <overwrite>true</overwrite>
                             <resources>
                                 <resource>
-                                    <directory>../common/target/classes/META-INF/fabric8</directory>
+                                    <directory>../Lib/common/target/classes/META-INF/fabric8</directory>
                                     <includes>
                                         <include>batchjobs.batchjob.gcr.io-v1.yml</include>
                                         <include>schedulings.batchjob.gcr.io-v1.yml</include>

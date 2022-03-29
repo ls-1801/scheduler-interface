@@ -1,0 +1,18 @@
+{{if .Values.priorityClasses.create}}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{.Values.priorityClasses.preemptor.name}}
+value: {{.Values.priorityClasses.preemptor.value}}
+globalDefault: false
+description: "This priority class should be used for pods that will preempt slots in a testbed"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{.Values.priorityClasses.preemptee.name}}
+value: {{.Values.priorityClasses.preemptee.value}}
+globalDefault: false
+description: "This priority class should be used for ghost pods that may be preempted by pods using the testbed."
+{{end}}

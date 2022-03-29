@@ -1,0 +1,306 @@
+{{- if .Values.createNamespace}}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{.Values.namespace}}
+{{- end}}
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: batchjob-operator
+  namespace: {{.Values.namespace | quote }}
+spec:
+  selector:
+    matchLabels:
+      app: batchjob-operator
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: batchjob-operator
+    spec:
+      serviceAccountName: {{.Values.serviceAccount.name | quote}}
+      containers:
+        - name: operator
+          image: {{.Values.image.repository }}batchjob-operator
+          imagePullPolicy: {{.Values.image.pullPolicy}}
+          ports:
+            - containerPort: 8081
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            httpGet:
+              path: "/actuator/health/liveness"
+              port: 8081
+            failureThreshold: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: "/actuator/health/readiness"
+              port: 8081
+            failureThreshold: 3
+            periodSeconds: 10
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testbed-operator
+  namespace: {{.Values.namespace | quote }}
+spec:
+  selector:
+    matchLabels:
+      app: testbed-operator
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: testbed-operator
+    spec:
+      serviceAccountName: {{.Values.serviceAccount.name | quote}}
+      containers:
+        - name: operator
+          image: {{.Values.image.repository }}testbed-operator
+          imagePullPolicy: {{.Values.image.pullPolicy}}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            httpGet:
+              path: "/actuator/health/liveness"
+              port: 8080
+            failureThreshold: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: "/actuator/health/readiness"
+              port: 8080
+            failureThreshold: 3
+            periodSeconds: 10
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduling-operator
+  namespace: {{.Values.namespace | quote }}
+spec:
+  selector:
+    matchLabels:
+      app: scheduling-operator
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: scheduling-operator
+    spec:
+      serviceAccountName: {{.Values.serviceAccount.name | quote}}
+      containers:
+        - name: operator
+          image: {{.Values.image.repository }}scheduling-operator
+          imagePullPolicy: {{.Values.image.pullPolicy}}
+          ports:
+            - containerPort: 8082
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            httpGet:
+              path: "/actuator/health/liveness"
+              port: 8082
+            failureThreshold: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: "/actuator/health/readiness"
+              port: 8082
+            failureThreshold: 3
+            periodSeconds: 10
+
+  {{if .Values.serviceAccount.create}}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{.Values.serviceAccount.name | quote}}
+  namespace: {{.Values.namespace | quote }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: debug-external-scheduler-interface
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - "patch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: external-scheduler-interface
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - "get"
+      - "watch"
+      - "list"
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - "get"
+      - "watch"
+      - "list"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: external-scheduler-interface
+  namespace: {{.Values.namespace | quote }}
+rules:
+  - apiGroups:
+      - batchjob.gcr.io
+    resources:
+      - schedulings
+    verbs:
+      - "*"
+  - apiGroups:
+      - batchjob.gcr.io
+    resources:
+      - schedulings/status
+    verbs:
+      - "*"
+  - apiGroups:
+      - batchjob.gcr.io
+    resources:
+      - slots
+    verbs:
+      - "*"
+  - apiGroups:
+      - batchjob.gcr.io
+    resources:
+      - slots/status
+    verbs:
+      - "*"
+  - apiGroups:
+      - batchjob.gcr.io
+    resources:
+      - batchjobs
+    verbs:
+      - "*"
+  - apiGroups:
+      - batchjob.gcr.io
+    resources:
+      - batchjobs/status
+    verbs:
+      - "*"
+  - apiGroups:
+      - flinkoperator.k8s.io
+    resources:
+      - flinkclusters
+    verbs:
+      - "create"
+      - "get"
+      - "list"
+      - "watch"
+      - "delete"
+  - apiGroups:
+      - sparkoperator.k8s.io
+    resources:
+      - sparkapplications
+    verbs:
+      - "create"
+      - "get"
+      - "list"
+      - "watch"
+      - "delete"
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - "get"
+      - "patch"
+      - "create"
+      - "update"
+      - "delete"
+      - "watch"
+      - "list"
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - "create"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: external-scheduler-interface
+  namespace: {{.Values.namespace | quote }}
+subjects:
+  - kind: ServiceAccount
+    name: {{.Values.serviceAccount.name | quote}}
+    namespace: {{.Values.namespace | quote }}
+roleRef:
+  kind: Role
+  name: external-scheduler-interface
+  apiGroup: ""
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: external-scheduler-interface
+subjects:
+  - kind: ServiceAccount
+    name: {{.Values.serviceAccount.name | quote}}
+    namespace: {{.Values.namespace | quote }}
+roleRef:
+  kind: ClusterRole
+  name: external-scheduler-interface
+  apiGroup: ""
+
+  {{if .Values.serviceAccount.debug}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: debug-external-scheduler-interface
+subjects:
+  - kind: ServiceAccount
+    name: {{.Values.serviceAccount.name | quote}}
+    namespace: {{.Values.namespace | quote }}
+roleRef:
+  kind: ClusterRole
+  name: debug-external-scheduler-interface
+  apiGroup: ""
+  {{end}}
+
+  {{end}}
