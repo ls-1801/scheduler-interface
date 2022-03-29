@@ -44,3 +44,6 @@ replay_pid*
 .idea
 .semanticgraphs
 *.iml
+*.ipr
+*.iws
+
