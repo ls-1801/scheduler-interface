@@ -6,7 +6,7 @@ import lombok.Data;
 import javax.annotation.Nullable;
 
 @Data
-public abstract class AbstractBatchJobCondition {
+public class AbstractBatchJobCondition {
 
     protected String condition;
     protected Boolean value = false;

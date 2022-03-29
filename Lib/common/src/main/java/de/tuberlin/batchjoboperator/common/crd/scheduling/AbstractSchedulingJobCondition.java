@@ -6,8 +6,15 @@ import lombok.Data;
 import javax.annotation.Nullable;
 import java.util.Set;
 
+/**
+ * Both the AbstractSchedulingJobCondition and the AbstractBatchJobCondition are used for the CRD generation.
+ * The Scheduling State machine does extend AbstractSchedulingJobCondition and also implements a custom deserializer
+ * that deserializes into a concrete class. However, these classes can not actually be abstract, because the other
+ * applications need to deserialize it, they don't need to know about concrete classes, but they need to know all
+ * possible fields.
+ */
 @Data
-public abstract class AbstractSchedulingJobCondition {
+public class AbstractSchedulingJobCondition {
     protected String condition;
     protected Boolean value = false;
 
