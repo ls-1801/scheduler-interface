@@ -123,6 +123,13 @@ public class PodsPerNode {
                                   .collect(toImmutableList());
     }
 
+    public PodsPerNode getCompletedPods() {
+        return PodsPerNode.groupByNode(podsPerNodeMap.values().stream().flatMap(Collection::stream)
+                                                     .filter(pod -> getNullSafe(() -> "Succeeded".equals(pod.getStatus()
+                                                                                                            .getPhase())).orElse(false))
+                                                     .collect(Collectors.toList()));
+    }
+
     public PodsPerNode getPodsWithProblems() {
         return PodsPerNode.groupByNode(podsPerNodeMap.values().stream().flatMap(Collection::stream)
                                                      .filter(pod -> getNullSafe(() -> "Failed".equals(pod.getStatus()
@@ -161,5 +168,9 @@ public class PodsPerNode {
 
     public PodsPerNode removePodsWithProblems(PodsPerNode podsWithProblems) {
         return diff(podsWithProblems, true);
+    }
+
+    public PodsPerNode removeCompletedPods(PodsPerNode completedPods) {
+        return diff(completedPods, true);
     }
 }

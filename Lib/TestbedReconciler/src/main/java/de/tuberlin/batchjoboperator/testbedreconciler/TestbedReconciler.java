@@ -98,6 +98,30 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
     }
 
 
+    private PodsPerNode removeCompletedPods(PodsPerNode observed) {
+        var podsWithProblems = observed.getCompletedPods();
+
+        // Deleting pods with problems, hoping that might resolve the issues
+        podsWithProblems.getPods().stream()
+                        .peek(p -> log.info("Pod {} has completed", p.getName()))
+                        .forEach(p -> kubernetesClient.pods().inNamespace(namespace).withName(p.getName())
+                                                      .delete());
+
+        return observed.removeCompletedPods(podsWithProblems);
+    }
+
+    private PodsPerNode removePodsWithProblems(PodsPerNode observed) {
+        var podsWithProblems = observed.getPodsWithProblems();
+
+        // Deleting pods with problems, hoping that might resolve the issues
+        podsWithProblems.getPods().stream()
+                        .peek(p -> log.warn("Pod {} has a problem: {}", p.getName(), p.getStatus().getReason()))
+                        .forEach(p -> kubernetesClient.pods().inNamespace(namespace).withName(p.getName())
+                                                      .delete());
+
+        return observed.removePodsWithProblems(podsWithProblems);
+    }
+
     private UpdateControl<Slot> reconcileInternal(Slot resource, Context context) {
         addToResourceMap(resource);
         PodsPerNode observed;
@@ -114,15 +138,9 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
             return UpdateControl.noUpdate();
         }
 
-        var podsWithProblems = observed.getPodsWithProblems();
 
-        // Deleting pods with problems, hoping that might resolve the issues
-        podsWithProblems.getPods().stream()
-                        .peek(p -> log.warn("Pod {} has a problem: {}", p.getName(), p.getStatus().getReason()))
-                        .forEach(p -> kubernetesClient.pods().inNamespace(getNamespace(resource)).withName(p.getName())
-                                                      .delete());
-
-        observed = observed.removePodsWithProblems(podsWithProblems);
+        observed = removePodsWithProblems(observed);
+        observed = removeCompletedPods(observed);
 
         // Manual preemption is necessary if scheduler preemption is not triggered. This happens if enough resource
         // are available on a node to place jobs, that should preempt the ghostpod, next to it on the node.
