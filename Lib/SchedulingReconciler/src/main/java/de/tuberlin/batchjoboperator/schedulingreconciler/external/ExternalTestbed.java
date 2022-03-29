@@ -13,5 +13,7 @@ import java.util.Set;
 public class ExternalTestbed {
     private String name;
     private SlotsStatusState state;
+    private int numberOfNodes;
+    private int numberOfSlotsPerNode;
     private Map<String, Set<SlotOccupationStatus>> slotsByNode;
 }

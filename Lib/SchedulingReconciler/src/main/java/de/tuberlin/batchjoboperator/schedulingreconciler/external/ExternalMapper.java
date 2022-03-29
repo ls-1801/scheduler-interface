@@ -25,6 +25,9 @@ public interface ExternalMapper {
     @Mapping(source = "metadata.name", target = "name")
     @Mapping(source = "status.slots", target = "slotsByNode")
     @Mapping(source = "status.state", target = "state")
+    @Mapping(expression = "java(internal.getStatus().getSlots().size() / internal.getSpec().getSlotsPerNode())",
+            target = "numberOfNodes")
+    @Mapping(target = "numberOfSlotsPerNode", source = "spec.slotsPerNode")
     ExternalTestbed toExternal(Slot internal);
 
     @Mapping(source = "metadata.name", target = "name")
