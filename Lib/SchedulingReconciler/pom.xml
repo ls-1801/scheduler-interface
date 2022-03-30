@@ -93,11 +93,11 @@
                 <configuration>
                     <jsonLibrary>jackson2</jsonLibrary>
                     <classes>
-                        <class>de.tuberlin.batchjoboperator.schedulingreconciler.external.ExternalScheduling</class>
-                        <class>de.tuberlin.batchjoboperator.schedulingreconciler.external.ExternalTestbed</class>
-                        <class>de.tuberlin.batchjoboperator.schedulingreconciler.external.ExternalBatchJob</class>
-                        <class>de.tuberlin.batchjoboperator.schedulingreconciler.external.JobsByName</class>
-                        <class>de.tuberlin.batchjoboperator.schedulingreconciler.external.ExternalResourceModification
+                        <class>de.tuberlin.esi.schedulingreconciler.external.ExternalScheduling</class>
+                        <class>de.tuberlin.esi.schedulingreconciler.external.ExternalTestbed</class>
+                        <class>de.tuberlin.esi.schedulingreconciler.external.ExternalBatchJob</class>
+                        <class>de.tuberlin.esi.schedulingreconciler.external.JobsByName</class>
+                        <class>de.tuberlin.esi.schedulingreconciler.external.ExternalResourceModification
                         </class>
                     </classes>
                     <outputKind>module</outputKind>

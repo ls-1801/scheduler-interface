@@ -36,7 +36,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>de.tuberlin.batchjoboperator.examplescheduler.ExampleSchedulerApplication
+                            <mainClass>de.tuberlin.esi.examplescheduler.ExampleSchedulerApplication
                             </mainClass>
                         </manifest>
                     </archive>
