@@ -29,6 +29,15 @@ namespace already exists)
 
 > helm install -n test-namespace --create-namespace  esi .
 
+The Helm chart will installs:
+
+- CRDs: BatchJob, Scheduling, Testbed
+- Operator Deployments
+- Extender Service
+- Additional Kube-Scheduler which is configured to use the Extender Service
+- A single ServiceAccounts for all deployments
+- PriorityClasses
+
 #### Notes:
 
 The namespace also needs to be adjusted inside the value.yaml. Currently, most of the Interface uses the Helm Releases
@@ -37,6 +46,10 @@ Namespace. However, the Flink and Spark Operator need to be instructed which nam
 The Spark-Operator Service account is dependent on the release name. The Service account is specified inside the
 BatchJob Manifest and may need to be adjusted if the `SparkApplication` fails due to the service account not existing.
 If the installation uses the `esi` release name the spark operator service account is called `esi-spark-operator`
+
+Although the additional Kube Scheduler name is configurable, the modified Flink-Operator currently assumes Kube
+Scheduler to be called external-scheduler. Same applies to the priority classes, Flink-Operator uses high-priority for
+its pods.
 
 ### Evaluation setup
 
