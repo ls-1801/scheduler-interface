@@ -6,6 +6,7 @@ public enum BatchJobState {
     InitState(null),
     // BatchJob was created
     ReadyState("ReadyState"),
+    PendingDeletion("PendingDeletion"),
     // BatchJob was put into the Queue
     InQueueState("InQueueState"),
     // BatchJob was scheduled an SparkApplication is pending

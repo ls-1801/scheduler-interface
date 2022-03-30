@@ -7,6 +7,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import k8s.sparkoperator.SparkApplication;
 import k8s.sparkoperator.SparkApplicationStatusState;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Set;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
 @RequiredArgsConstructor
+@Slf4j
 public class SparkApplicationProvider implements ApplicationSpecific {
     private final KubernetesClient client;
     private final NamespacedName name;
@@ -45,7 +47,7 @@ public class SparkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isCompleted() {
-        if (!isExisting()) {
+        if (getApplication() == null) {
             return false;
         }
 
@@ -54,7 +56,7 @@ public class SparkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isRunning() {
-        if (!isExisting()) {
+        if (getApplication() == null) {
             return false;
         }
 
@@ -68,14 +70,14 @@ public class SparkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public List<Pod> getPods() {
-        if (!isExisting())
+        if (getApplication() == null)
             return Collections.emptyList();
 
         if (pods == null) {
             pods = client.pods()
                          .inNamespace(name.getNamespace())
                          .withLabels(Map.of(
-                                 "sparkoperator.k8s.io/app-name", name.getName(),
+                                 "SPARK_POD_LABEL", name.getName(),
                                  "spark-role", "executor")
                          )
                          .list().getItems();
@@ -87,7 +89,15 @@ public class SparkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isExisting() {
-        return getApplication() != null;
+        boolean applicationDeleted = getApplication() == null;
+        boolean podsDeleted = client.pods().inNamespace(name.getNamespace())
+                                    .withLabel("SPARK_POD_LABEL", name.getName())
+                                    .list().getItems().isEmpty();
+
+        log.debug("Is Spark Application Deleted? ApplicationDeleted: {}, PodsDeleted: {}", applicationDeleted,
+                podsDeleted);
+
+        return !(applicationDeleted && podsDeleted);
     }
 
     @Override
@@ -101,7 +111,7 @@ public class SparkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isFailed() {
-        if (!isExisting())
+        if (getApplication() == null)
             return false;
 
         return stateInSet(failedState);

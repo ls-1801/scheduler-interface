@@ -8,6 +8,8 @@ import de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState;
 import de.tuberlin.batchjoboperator.common.statemachine.Action;
 import de.tuberlin.batchjoboperator.common.statemachine.Condition;
 import de.tuberlin.batchjoboperator.common.statemachine.UpdateResult;
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
@@ -18,6 +20,7 @@ import io.javaoperatorsdk.operator.api.reconciler.EventSourceInitializer;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
 import io.javaoperatorsdk.operator.api.reconciler.RetryInfo;
 import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
+import io.javaoperatorsdk.operator.processing.event.ResourceID;
 import io.javaoperatorsdk.operator.processing.event.source.EventSource;
 import io.javaoperatorsdk.operator.processing.event.source.informer.InformerEventSource;
 import io.javaoperatorsdk.operator.processing.event.source.informer.Mappers;
@@ -28,13 +31,16 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.BatchJobStateMachine.STATE_MACHINE;
+import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.FLINK_POD_LABEL;
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.MANAGED_BY_LABEL_VALUE;
+import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.SPARK_POD_LABEL;
 import static de.tuberlin.batchjoboperator.common.statemachine.Action.getConditions;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 import static de.tuberlin.batchjoboperator.common.util.General.lastElement;
@@ -47,6 +53,7 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInitializer<BatchJob> {
 
     private static final Logger log = LoggerFactory.getLogger(BatchJobReconciler.class);
+
 
     private final KubernetesClient kubernetesClient;
     private final String namespace;
@@ -85,6 +92,18 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
         status.setReplication(creationRequest.getReplication());
     }
 
+    private Set<ResourceID> associatedPrimaryResources(HasMetadata pod) {
+        if (pod.getMetadata().getLabels().containsKey(FLINK_POD_LABEL)) {
+            return Collections.singleton(new ResourceID(pod.getMetadata().getLabels().get(FLINK_POD_LABEL), namespace));
+        }
+
+        if (pod.getMetadata().getLabels().containsKey(SPARK_POD_LABEL)) {
+            return Collections.singleton(new ResourceID(pod.getMetadata().getLabels().get(SPARK_POD_LABEL), namespace));
+        }
+
+        return Collections.emptySet();
+    }
+
     @Override
     public List<EventSource> prepareEventSources(EventSourceContext<BatchJob> context) {
         log.info("Watching to Spark and Flink Applications in namespace: {}", namespace);
@@ -93,14 +112,20 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
                                 .inNamespace(namespace)
                                 .withLabel(MANAGED_BY_LABEL_NAME, MANAGED_BY_LABEL_VALUE)
                                 .runnableInformer(0);
+
         SharedIndexInformer<FlinkCluster> flinkApplicationSharedIndexInformer =
                 kubernetesClient.resources(FlinkCluster.class)
                                 .inNamespace(namespace)
                                 .withLabel(MANAGED_BY_LABEL_NAME, MANAGED_BY_LABEL_VALUE)
                                 .runnableInformer(0);
 
+        SharedIndexInformer<Pod> podSharedIndexInformer = kubernetesClient
+                .pods().inNamespace(namespace)
+                .runnableInformer(0);
+
 
         return List.of(
+                new InformerEventSource<>(podSharedIndexInformer, this::associatedPrimaryResources),
                 new InformerEventSource<>(sparkApplicationSharedIndexInformer, Mappers.fromOwnerReference(), null,
                         !testmode),
                 new InformerEventSource<>(flinkApplicationSharedIndexInformer, Mappers.fromOwnerReference(), null,

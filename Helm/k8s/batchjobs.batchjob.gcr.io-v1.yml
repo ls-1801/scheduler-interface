@@ -5134,6 +5134,7 @@ spec:
                   enum:
                     - InitState
                     - ReadyState
+                    - PendingDeletion
                     - InQueueState
                     - SubmittedState
                     - ScheduledState

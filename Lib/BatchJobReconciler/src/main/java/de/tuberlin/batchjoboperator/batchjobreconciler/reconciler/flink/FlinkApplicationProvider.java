@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.FLINK_POD_LABEL;
 import static de.tuberlin.batchjoboperator.common.crd.NamespacedName.getName;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
@@ -61,7 +62,7 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isCompleted() {
-        if (!isExisting())
+        if (getApplication() == null)
             return false;
 
         var isInCompletedState = stateInSet(completedStates);
@@ -78,7 +79,7 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isRunning() {
-        if (!isExisting())
+        if (getApplication() == null)
             return false;
 
         return stateInSet(runningStates);
@@ -86,13 +87,13 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public List<Pod> getPods() {
-        if (!isExisting())
+        if (getApplication() == null)
             return Collections.emptyList();
 
         if (pods == null) {
             pods = client.pods()
                          .inNamespace(name.getNamespace())
-                         .withLabels(Map.of("cluster", name.getName(), "component", "taskmanager"))
+                         .withLabels(Map.of(FLINK_POD_LABEL, name.getName(), "component", "taskmanager"))
                          .list().getItems();
         }
 
@@ -102,7 +103,16 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isExisting() {
-        return getApplication() != null;
+        boolean applicationDeleted = getApplication() == null;
+        boolean podsDeleted = client.pods().inNamespace(name.getNamespace())
+                                    .withLabel(FLINK_POD_LABEL, name.getName())
+                                    .list().getItems().isEmpty();
+
+        log.debug("Is Flink Application Deleted? ApplicationDeleted: {}, PodsDeleted: {}", applicationDeleted,
+                podsDeleted);
+
+        return !(applicationDeleted && podsDeleted);
+
     }
 
     @Override
@@ -114,7 +124,7 @@ public class FlinkApplicationProvider implements ApplicationSpecific {
 
     @Override
     public boolean isFailed() {
-        if (!isExisting())
+        if (getApplication() == null)
             return false;
 
         if (getApplication().getStatus() == null)

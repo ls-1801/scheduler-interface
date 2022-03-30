@@ -19,6 +19,7 @@ import static de.tuberlin.batchjoboperator.batchjobreconciler.reconciler.conditi
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.CompletedState;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.FailedState;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.InQueueState;
+import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.PendingDeletion;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.ReadyState;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.RunningState;
 import static de.tuberlin.batchjoboperator.common.crd.batchjob.BatchJobState.ScheduledState;
@@ -40,13 +41,26 @@ public class BatchJobStateMachine {
                  )).build(),
 
             /*
+             * BatchJob Waits in this state until the application was completely removed:
+             * SparkApplication have the problem, that if a scheduling instantly restarts a BatchJob, the
+             * SparkApplication thinks it is still running.
+             */
+            State.<BatchJobContext>withName(PendingDeletion.name())
+                 .condition(OnCondition.all(
+                         (c, bc) -> log.info("Application was deleted"),
+                         ReadyState.name(),
+                         AWAIT_DELETION_CONDITION
+                 )).build(),
+
+            /*
              * This Represents the "NotInQueue" State:
-             * - If the Current user of the BatchJob Releases the Job it will go back into the ReadyState
+             * - If the Current user of the BatchJob Releases the Job it will go to the Pending Deletion State until
+             * the application has been fully removed
              */
             State.<BatchJobContext>anonymous()
                  .condition(OnCondition.any(
                          BatchJobReconciler::releaseRequest,
-                         ReadyState.name(),
+                         PendingDeletion.name(),
                          AWAIT_RELEASE_CONDITION
                  ))
                  /*
