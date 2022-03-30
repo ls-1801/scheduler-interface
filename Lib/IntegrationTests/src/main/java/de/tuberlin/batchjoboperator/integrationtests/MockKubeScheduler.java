@@ -58,9 +58,9 @@ class MockKubeScheduler {
     private final ExtenderController uut;
 
     public void start() {
-        log.info("#".repeat(80));
-        log.info("#".repeat(29) + "MOCK SCHEDULER STARTED" + "#".repeat(29));
-        log.info("#".repeat(80));
+        log.info("#" .repeat(80));
+        log.info("#" .repeat(29) + "MOCK SCHEDULER STARTED" + "#" .repeat(29));
+        log.info("#" .repeat(80));
         new Thread(this::run).start();
     }
 
@@ -105,6 +105,11 @@ class MockKubeScheduler {
         // Synchronized prevents filterNodes from executing concurrently, however the Watcher is still running and
         // may call filterNodes with outdated pods. We Update the pod in question and recheck if it still needs
         // scheduling
+        if (pod == null) {
+            log.info("Pod has already been deleted. Abort");
+            return;
+        }
+
         if (pod.getSpec().getNodeName() != null) {
             log.info("Pod Is already Scheduled. Abort");
             return;
