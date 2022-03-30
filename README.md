@@ -29,9 +29,14 @@ namespace already exists)
 
 > helm install -n test-namespace --create-namespace  esi .
 
-**Note**: The namespace also needs to be adjusted inside the value.yaml. Currently, most of the Interface uses the Helm
-Releases Namespace. However, the Flink and Spark Operator need to be instructed which namespace to watch for
-Applications.
+#### Notes:
+
+The namespace also needs to be adjusted inside the value.yaml. Currently, most of the Interface uses the Helm Releases
+Namespace. However, the Flink and Spark Operator need to be instructed which namespace to watch for Applications.
+
+The Spark-Operator Service account is dependent on the release name. The Service account is specified inside the
+BatchJob Manifest and may need to be adjusted if the `SparkApplication` fails due to the service account not existing.
+If the installation uses the `esi` release name the spark operator service account is called `esi-spark-operator`
 
 ### Evaluation setup
 

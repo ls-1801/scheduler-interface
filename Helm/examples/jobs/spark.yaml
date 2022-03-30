@@ -2,6 +2,7 @@ apiVersion: esi.tu-berlin.de/v1alpha1
 kind: BatchJob
 metadata:
   name: batchjob-spark
+  namespace: test-namespace
 spec:
   sparkSpec:
     type: Scala
@@ -26,7 +27,7 @@ spec:
       memory: "512m"
       labels:
         version: 3.1.1
-      serviceAccount: spark-operator-spark
+      serviceAccount: esi-spark-operator
       volumeMounts:
         - name: "test-volume"
           mountPath: "/tmp"
