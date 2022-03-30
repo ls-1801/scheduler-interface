@@ -49,7 +49,7 @@ public class ExtenderTest extends BaseReconcilerTest {
     @Nonnull
     @Override
     protected List<Reconciler> createReconcilers(Supplier<KubernetesClient> clientSupplier) {
-        return Collections.singletonList(new TestbedReconciler(clientSupplier.get(), NAMESPACE));
+        return Collections.singletonList(new TestbedReconciler(clientSupplier.get(), NAMESPACE, true));
     }
 
     @Override
@@ -79,7 +79,7 @@ public class ExtenderTest extends BaseReconcilerTest {
                                                                                               "cpu", new Quantity(
                                                                                                       "500m"),
                                                                                               "memory", new Quantity(
-                                                                                                      "300M")
+                                                                                                      "4Gi")
                                                                                       ))
                                                                                       .build(), null));
 
@@ -150,7 +150,7 @@ public class ExtenderTest extends BaseReconcilerTest {
                                                      .slotsPerNode(3)
                                                      .resourcesPerSlot(Map.of(
                                                              "cpu", new Quantity("500m"),
-                                                             "memory", new Quantity("300M")
+                                                             "memory", new Quantity("4Gi")
                                                      ))
                                                      .build(), null));
 
@@ -160,7 +160,7 @@ public class ExtenderTest extends BaseReconcilerTest {
                                                      .slotsPerNode(2)
                                                      .resourcesPerSlot(Map.of(
                                                              "cpu", new Quantity("1000m"),
-                                                             "memory", new Quantity("300M")
+                                                             "memory", new Quantity("4Gi")
                                                      ))
                                                      .build(), null));
 
