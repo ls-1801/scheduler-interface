@@ -60,6 +60,17 @@ outside the cluster.
 
 > GET http://localhost:8080/debug/node-set-up?name=batchjob-slots&count=3
 
-> GET http://localhost:8080/debug/node-set-up?name=profiler-slots&count=1 
+> GET http://localhost:8080/debug/node-set-up?name=profiler-slots&count=1
 
+To build the Example Scheduler
 
+> mvn install -pl ExampleScheduler -am
+
+The external interface needs to accessible, since there is no proper authorization, it is again advised to either deploy
+the Example Scheduler inside the kubernetes cluster or to `kubectl port-forward SCHEDULING-OPERATOR-POD 8082:8082`.
+After building the Example Scheduler the executable jar file is located in the ExampleScheduler/target folder.
+
+> java -jar ExampleScheduler-0.0.1-SNAPSHOT-jar-with-dependencies.jar http://localhost:8082
+
+The example scheduler expects `profiler-slots` and `scheduler-slots` Testbeds to exist, however the -p and -s argument
+specifies different Testbeds.

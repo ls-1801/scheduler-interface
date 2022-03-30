@@ -51,7 +51,6 @@ public abstract class ExternalSchedulerStompSessionHandler<T> implements StompSe
     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
         initial().filter(b -> b).subscribe(b -> this.publisher.onComplete());
         this.session = session;
-        log.info("Stomp: Connected");
         this.subscription = session.subscribe(topic, this);
     }
 
@@ -71,7 +70,6 @@ public abstract class ExternalSchedulerStompSessionHandler<T> implements StompSe
         }
 
         if (stompClient.isRunning()) {
-            log.info("Stomp: Stopping");
             stompClient.stop();
         }
     }
@@ -104,6 +102,7 @@ public abstract class ExternalSchedulerStompSessionHandler<T> implements StompSe
             try {
                 log.warn("Stomp: Reconnecting... {}", tries++);
                 stompClient.connect(url, this).get();
+                log.info("Stomp: Reconnected");
                 disconnected = false;
             } catch (Exception e) {
                 log.warn("Stomp: Reconnect failed. {}", e.getMessage());
