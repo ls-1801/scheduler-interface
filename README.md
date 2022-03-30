@@ -1,5 +1,21 @@
 External-Scheduler-Interface
 
+### Structure
+
+The Lib module contains the implementation of the 3 reconcilers. Code which is shared between reconcilers is placed
+inside the common module. The integration test modules contains only integration tests, and the Mock Scheduler
+Implementation.
+
+The Web module is used to build the Spring Boot Applications, the modules were seperated from one another because the
+jar produced by the Spring Boot plugin could not be used for the integration test module and the external scheduler. The
+Web modules contain web specific configurations. Like the actuator endpoints, and the server port.
+
+The ExampleScheduler Module contains the example scheduler used in the evaluation. It depends on the
+SchedulingReconciler which contains the External-Scheduler-Interface classes, which are used for serialization and
+deserialization.
+
+The Helm Module contains the Helm Chart and example BatchJobs, Schedulings, and Testbeds.
+
 ### Installation
 
 Installation using the helm chart was tested on a fresh cluster
@@ -13,7 +29,9 @@ namespace already exists)
 
 > helm install -n test-namespace --create-namespace  esi .
 
-**Note**:
+**Note**: The namespace also needs to be adjusted inside the value.yaml. Currently, most of the Interface uses the Helm
+Releases Namespace. However, the Flink and Spark Operator need to be instructed which namespace to watch for
+Applications.
 
 ### Evaluation setup
 
@@ -89,3 +107,16 @@ After building the Example Scheduler the executable jar file is located in the E
 
 The example scheduler expects `profiler-slots` and `scheduler-slots` Testbeds to exist, however the -p and -s argument
 specifies different Testbeds.
+
+### Development
+
+To build the Operators and push the images the image registry run the following command. Unfortunately, tests are
+current state are not passing reliable and are skipped. The probably needs to be configured, unless authorized to push
+images to the registry `-Dbuild.image.registry=yourregistry`.
+
+> mvn clean install -DskipTests jib:build
+
+CRDs are only generated if the generate-crds profile is specified. CRDs are built from the commons module and copied
+into the Helm module.
+
+> mvn clean install -pl Helm -am -Pgenerate-crds

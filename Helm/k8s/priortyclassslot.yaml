@@ -1,7 +1,0 @@
-apiVersion: scheduling.k8s.io/v1
-kind: PriorityClass
-metadata:
-  name: slot-priority
-value: 100
-globalDefault: false
-description: "This priority class should be used for ghost pods that may be preempted by pods using the testbed."

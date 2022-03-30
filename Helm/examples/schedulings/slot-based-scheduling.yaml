@@ -1,0 +1,20 @@
+apiVersion: batchjob.gcr.io/v1alpha1
+kind: Scheduling
+metadata:
+  name: scheduling
+spec:
+  slots:
+    name: batchjob-slots
+    namespace: default
+  slotBased:
+    mode: strict
+    jobs:
+      - name:
+          name: batchjob-sample
+          namespace: default
+        slotIds: [ 0,1 ]
+      - name:
+          name: batchjob-flink
+          namespace: default
+        slotIds: [ 0,1 ]
+

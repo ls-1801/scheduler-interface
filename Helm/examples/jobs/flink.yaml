@@ -2,7 +2,7 @@ apiVersion: batchjob.gcr.io/v1alpha1
 kind: BatchJob
 metadata:
   name: batchjob-flink3
-  namespace: default
+  namespace: test-namespace
 spec:
   externalScheduler:
     profiler:
