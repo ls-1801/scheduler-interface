@@ -48,8 +48,8 @@ import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.platform.commons.util.ClassLoaderUtils;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -137,7 +137,7 @@ public abstract class BaseReconcilerTest {
     protected void createCRDFromResource(String filename) {
         CustomResourceDefinition crd =
                 server.getClient().apiextensions().v1().customResourceDefinitions()
-                      .load(new FileInputStream("src/test/resources/" + filename))
+                      .load(ClassLoaderUtils.getDefaultClassLoader().getResource("crds/" + filename))
                       .get();
         CustomResourceDefinition createdCrd = server.getClient().apiextensions().v1()
                                                     .customResourceDefinitions()
@@ -475,7 +475,7 @@ public abstract class BaseReconcilerTest {
     @SneakyThrows
     protected String createJob(String filename) {
         var job = new ObjectMapper(new YAMLFactory())
-                .readValue(new FileInputStream("src/test/resources/jobs/" + filename), BatchJob.class);
+                .readValue(ClassLoaderUtils.getDefaultClassLoader().getResource("jobs/" + filename), BatchJob.class);
 
         job.getMetadata().setNamespace(NAMESPACE);
 
