@@ -117,7 +117,7 @@ class MockKubeScheduler {
 
 
         // This Method uses recursion. Recursing twice should never be required
-        assertThat(retries).isLessThan(2);
+        assertThat(retries).isLessThan(5);
 
         var nodes =
                 client.nodes().list().getItems().stream().collect(Collectors.toMap(
@@ -187,6 +187,7 @@ class MockKubeScheduler {
               .filter(p -> victimPodUid.equals(p.getMetadata().getUid()))
               .findFirst()
               .ifPresent(victimPod -> {
+                  log.info("Preempting Pod {}", victimPod);
                   client.pods().inNamespace(victimPod.getMetadata().getNamespace()).delete(victimPod);
               });
 

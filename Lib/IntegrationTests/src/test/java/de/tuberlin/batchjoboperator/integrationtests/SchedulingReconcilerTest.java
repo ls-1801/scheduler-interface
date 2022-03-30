@@ -164,8 +164,9 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
     }
 
     /**
-     * This tests revealed a bug, where the QueueBased Strategy only waits for a specific number of slots available,
-     * however it the test case cannot stop all pods at once and the Testbed may reconcile in between thus marking
+     * This tests revealed an interesting scenario, where the QueueBased Strategy only waits for a specific number of
+     * slots available.
+     * However, the test case cannot stop all pods at once and the Testbed may reconcile in between thus marking
      * only a single slot as free. This causes job 4 to sometimes use 0_3 because the first pod of job3 gets
      * terminated and now 2 slots are already available for the scheduling if job 4
      */
@@ -186,7 +187,8 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
         // 2, 1, 2, 1
         // _, 1, _, 1
         // 3, 3, 3, _
-        // 4, 4, _, _
+        // 4, 3, 3, 0
+        // 4, _, _, 4
         createScheduling(TEST_SCHEDULING,
                 List.of(job2, job1, job2, job1, job3, job3, job3, job4, job4)
         );
@@ -213,11 +215,11 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
 
         var flinkApplication1 = new FlinkApplicationMock(job1, Set.of(1, 3))
                 .initialize()
-                .createsPods();
+                .createsPods().becomesScheduled();
 
-        assertSchedulingState(TEST_SCHEDULING, SchedulingState.ConfirmationState);
+        assertSchedulingState(TEST_SCHEDULING, SchedulingState.SubmissionState);
 
-        flinkApplication1.becomesScheduled().startsRunning();
+        flinkApplication1.startsRunning();
 
         assertSchedulingState(TEST_SCHEDULING, SchedulingState.SubmissionState);
 
@@ -249,9 +251,9 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
 
         assertSchedulingState(TEST_SCHEDULING, SchedulingState.AwaitingCompletionState);
 
-        assertApplicationCreationWasRequested(job4, "0_1", 2);
+        assertApplicationCreationWasRequested(job4, "0_3", 2);
 
-        var flinkApplication4 = new FlinkApplicationMock(job4, Set.of(0, 1))
+        var flinkApplication4 = new FlinkApplicationMock(job4, Set.of(0, 3))
                 .initialize();
 
         assertSchedulingState(TEST_SCHEDULING, SchedulingState.AwaitingCompletionState);
