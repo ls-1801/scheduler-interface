@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 namespace: "test-namespace"
-createNamespace: true
+createNamespace: false
 
 image:
   repository: gcr.io/spark-on-kubernetes-316714/
@@ -18,7 +18,7 @@ fullnameOverride: ""
 priorityClasses:
   create: true
   preemptor:
-    name: testbed-preemptor
+    name: high-priority
     value: 1000
   preemptee:
     name: testbed-preemptee
@@ -35,16 +35,22 @@ serviceAccount:
   debug: true
 
 scheduler:
-  create: false
+  create: true
   serviceaccount:
     create: true
     name: external-scheduler
+
+spark-operator:
+  sparkJobNamespace: "test-namespace"
+  webhook:
+    enable: true
 
 flink-operator:
   operatorImage:
     name: flink-operator:latest
     pullPolicy: always
 
-  watchNamespace: "test-namespace"
+  watchNamespace: test-namespace
   flinkOperatorNamespace:
-    name: "test-namespace"
+    create: false
+    name: test-namespace

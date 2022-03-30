@@ -35,7 +35,7 @@ data:
     profiles:
       - schedulerName: external-scheduler
     extenders:
-      - urlPrefix: "http://10.112.2.4:80"
+      - urlPrefix: "http://extender-service.{{.Release.Namespace}}.svc.cluster.local:80"
         filterVerb: "extender/filter"
         preemptVerb: "extender/preemption"
         weight: 1

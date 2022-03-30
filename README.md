@@ -1,5 +1,20 @@
 External-Scheduler-Interface
 
+### Installation
+
+Installation using the helm chart was tested on a fresh cluster
+
+The Helm chart located in the Helm module. The Helm chart will additionally install the Spark and Flink Operator.
+
+Images are publicly available in the gcr.io/spark-on-kubernetes-316714 repository. No build is required.
+
+To install the helm chart in the test-namespace run: (this will create the namespace, remove --create-namespace if
+namespace already exists)
+
+> helm install -n test-namespace --create-namespace  esi .
+
+**Note**:
+
 ### Evaluation setup
 
 Create the Testbed resources

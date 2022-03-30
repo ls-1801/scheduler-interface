@@ -2,7 +2,7 @@ apiVersion: batchjob.gcr.io/v1alpha1
 kind: Slot
 metadata:
   name: batchjob-slots
-  namespace: default
+  namespace: test-namespace
 spec:
   slotsPerNode: 4
   nodeLabel: "tuberlin.de/node-with-slots"
@@ -15,7 +15,7 @@ apiVersion: batchjob.gcr.io/v1alpha1
 kind: Slot
 metadata:
   name: profiler-slots
-  namespace: default
+  namespace: test-namespace
 spec:
   slotsPerNode: 2
   nodeLabel: "tuberlin.de/node-with-slots-profiler"
