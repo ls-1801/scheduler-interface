@@ -67,6 +67,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.FLINK_POD_LABEL;
+import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.SPARK_POD_LABEL;
 import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAME;
 import static de.tuberlin.batchjoboperator.common.constants.SchedulingConstants.ACTIVE_SCHEDULING_LABEL_NAMESPACE;
 import static de.tuberlin.batchjoboperator.common.constants.SlotsConstants.SLOT_IDS_NAME;
@@ -500,7 +501,7 @@ public abstract class BaseReconcilerTest {
     protected void mockSparkPods(String jobName, int replication) {
         for (int i = 0; i < replication; i++) {
             createPod(new NamespacedName("spark-executor-pod" + i, NAMESPACE), Map.of(
-                    "SPARK_POD_LABEL", jobName, "spark-role", "executor", // Spark
+                    SPARK_POD_LABEL, jobName, "spark-role", "executor", // Spark
                     //Slot
                     SLOT_POD_SLOT_ID_NAME, "" + i,
                     SLOT_POD_LABEL_NAME, TEST_SLOT_NAME_1,
@@ -522,7 +523,7 @@ public abstract class BaseReconcilerTest {
     protected void createSparkPods(String jobName, PodInSlotsConfiguration configuration) {
         var config = configuration.toBuilder()
                                   .additionalLabels(Map.of(
-                                          "SPARK_POD_LABEL", jobName,
+                                          SPARK_POD_LABEL, jobName,
                                           "spark-role", "executor"))
                                   .build();
 

@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static de.tuberlin.batchjoboperator.common.constants.CommonConstants.SPARK_POD_LABEL;
 import static de.tuberlin.batchjoboperator.common.util.General.getNullSafe;
 
 @RequiredArgsConstructor
@@ -77,7 +78,7 @@ public class SparkApplicationProvider implements ApplicationSpecific {
             pods = client.pods()
                          .inNamespace(name.getNamespace())
                          .withLabels(Map.of(
-                                 "SPARK_POD_LABEL", name.getName(),
+                                 SPARK_POD_LABEL, name.getName(),
                                  "spark-role", "executor")
                          )
                          .list().getItems();
@@ -91,7 +92,7 @@ public class SparkApplicationProvider implements ApplicationSpecific {
     public boolean isExisting() {
         boolean applicationDeleted = getApplication() == null;
         boolean podsDeleted = client.pods().inNamespace(name.getNamespace())
-                                    .withLabel("SPARK_POD_LABEL", name.getName())
+                                    .withLabel(SPARK_POD_LABEL, name.getName())
                                     .list().getItems().isEmpty();
 
         log.debug("Is Spark Application Deleted? ApplicationDeleted: {}, PodsDeleted: {}", applicationDeleted,
