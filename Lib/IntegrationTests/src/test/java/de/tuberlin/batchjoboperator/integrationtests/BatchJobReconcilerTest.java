@@ -133,7 +133,18 @@ class BatchJobReconcilerTest extends BaseReconcilerTest {
 
 
         client.resources(FlinkCluster.class).inNamespace(NAMESPACE).withName(jobName).editStatus((flink) -> {
-            flink.setStatus(new V1beta1FlinkClusterStatus().state("Running"));
+            flink.setStatus(new V1beta1FlinkClusterStatus()
+                    .state("Running")
+                    .components(new V1beta1FlinkClusterStatusComponents()
+                            .jobManagerStatefulSet(new V1beta1FlinkClusterStatusComponentsConfigMap()
+                                    .name("JobManager")
+                                    .state("Scheduled"))
+                            .taskManagerStatefulSet(
+                                    new V1beta1FlinkClusterStatusComponentsConfigMap()
+                                            .name("TaskManager")
+                                            .state("Scheduled")
+                            )
+                    ));
             return flink;
         });
 
@@ -147,7 +158,18 @@ class BatchJobReconcilerTest extends BaseReconcilerTest {
 
 
         client.resources(FlinkCluster.class).inNamespace(NAMESPACE).withName(jobName).editStatus((flink) -> {
-            flink.setStatus(new V1beta1FlinkClusterStatus().state("Stopped"));
+            flink.setStatus(new V1beta1FlinkClusterStatus()
+                    .state("Stopped")
+                    .components(new V1beta1FlinkClusterStatusComponents()
+                            .jobManagerStatefulSet(new V1beta1FlinkClusterStatusComponentsConfigMap()
+                                    .name("JobManager")
+                                    .state("Deleted"))
+                            .taskManagerStatefulSet(
+                                    new V1beta1FlinkClusterStatusComponentsConfigMap()
+                                            .name("TaskManager")
+                                            .state("Deleted")
+                            )
+                    ));
             return flink;
         });
 
@@ -161,6 +183,9 @@ class BatchJobReconcilerTest extends BaseReconcilerTest {
 
 
         releaseJob(jobName);
+
+        assertJobStatus(jobName, BatchJobState.PendingDeletion);
+        deleteMockFlinkPods(jobName, 4);
 
         assertJobStatus(jobName, BatchJobState.ReadyState);
         assertJobConditions(jobName, Set.of(
@@ -283,6 +308,10 @@ class BatchJobReconcilerTest extends BaseReconcilerTest {
         ), Set.of());
 
         releaseJob(jobName);
+
+        assertJobStatus(jobName, BatchJobState.PendingDeletion);
+
+        deleteMockSparkPods(jobName, 4);
 
         assertJobStatus(jobName, BatchJobState.ReadyState);
         assertJobConditions(jobName, Set.of(

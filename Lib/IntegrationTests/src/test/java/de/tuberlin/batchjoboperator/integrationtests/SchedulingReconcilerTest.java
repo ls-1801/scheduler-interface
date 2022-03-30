@@ -470,8 +470,7 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
 
         public FlinkApplicationMock startsRunning() {
             client.resources(FlinkCluster.class).inNamespace(namespace).withName(name).editStatus((flinkCluster) -> {
-                flinkCluster.setStatus(
-                        new V1beta1FlinkClusterStatus().state("Running"));
+                flinkCluster.getStatus().state("Running");
                 return flinkCluster;
             });
 
@@ -489,12 +488,12 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
             Thread.sleep(300);
 
             client.resources(FlinkCluster.class).inNamespace(namespace).withName(name).editStatus((flinkCluster) -> {
-                flinkCluster.setStatus(
-                        new V1beta1FlinkClusterStatus().state("Stopped")
-                                                       .components(new V1beta1FlinkClusterStatusComponents()
-                                                               .taskManagerStatefulSet(new V1beta1FlinkClusterStatusComponentsConfigMap().state("Deleted"))
-                                                               .jobManagerStatefulSet(new V1beta1FlinkClusterStatusComponentsConfigMap().state("Deleted")))
-                );
+                flinkCluster.getStatus().state("Stopped")
+                            .getComponents()
+                            .taskManagerStatefulSet(
+                                    new V1beta1FlinkClusterStatusComponentsConfigMap().state("Deleted"))
+                            .jobManagerStatefulSet(
+                                    new V1beta1FlinkClusterStatusComponentsConfigMap().state("Deleted"));
                 return flinkCluster;
             });
 
@@ -509,7 +508,12 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
                 flinkCluster.setStatus(
                         new V1beta1FlinkClusterStatus()
                                 .state("Running")
-                                .components(new V1beta1FlinkClusterStatusComponents().taskManagerStatefulSet(
+                                .components(new V1beta1FlinkClusterStatusComponents()
+                                        .jobManagerStatefulSet(
+                                                new V1beta1FlinkClusterStatusComponentsConfigMap()
+                                                        .name("TaskManager")
+                                                        .state("Scheduled"))
+                                        .taskManagerStatefulSet(
                                                 new V1beta1FlinkClusterStatusComponentsConfigMap()
                                                         .name("TaskManager")
                                                         .state("Scheduled")

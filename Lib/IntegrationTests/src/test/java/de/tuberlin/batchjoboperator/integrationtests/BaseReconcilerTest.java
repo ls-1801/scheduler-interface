@@ -485,6 +485,12 @@ public abstract class BaseReconcilerTest {
         return job.getMetadata().getName();
     }
 
+    protected void deleteMockFlinkPods(String jobName, int replication) {
+        for (int i = 0; i < replication; i++) {
+            client.pods().inNamespace(NAMESPACE).withName("flink-TM-pod" + i).delete();
+        }
+    }
+
     protected void mockFlinkPods(String jobName, int replication) {
         for (int i = 0; i < replication; i++) {
             createPod(new NamespacedName("flink-TM-pod" + i, NAMESPACE), Map.of(
@@ -495,6 +501,13 @@ public abstract class BaseReconcilerTest {
                     SLOT_POD_IS_GHOSTPOD_NAME, "false",
                     SLOT_POD_TARGET_NODE_NAME, TEST_NODE_NAMES[i % TEST_NODE_NAMES.length]
             ), TEST_NODE_NAMES[i % TEST_NODE_NAMES.length]);
+        }
+    }
+
+
+    protected void deleteMockSparkPods(String jobName, int replication) {
+        for (int i = 0; i < replication; i++) {
+            client.pods().inNamespace(NAMESPACE).withName("spark-executor-pod" + i).delete();
         }
     }
 
