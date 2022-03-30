@@ -2,7 +2,7 @@ package de.tuberlin.esi.schedulingreconciler.external;
 
 import de.tuberlin.esi.common.crd.batchjob.BatchJob;
 import de.tuberlin.esi.common.crd.scheduling.Scheduling;
-import de.tuberlin.esi.common.crd.slots.Slot;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -43,8 +43,8 @@ public class ExternalSchedulerInterfaceController {
 
     @PostConstruct
     void initializeWatches() {
-        client.resources(Slot.class).inNamespace(namespace).watch(
-                new ReportingResourceWatcher<>("testbeds", mapper::toExternal, Slot.class));
+        client.resources(Testbed.class).inNamespace(namespace).watch(
+                new ReportingResourceWatcher<>("testbeds", mapper::toExternal, Testbed.class));
 
         client.resources(BatchJob.class).inNamespace(namespace).watch(
                 new ReportingResourceWatcher<>("jobs", mapper::toExternal, BatchJob.class));
@@ -55,7 +55,7 @@ public class ExternalSchedulerInterfaceController {
 
     @GetMapping("/external/testbeds")
     public List<ExternalTestbed> getTestbeds() {
-        var slots = client.resources(Slot.class).inNamespace(namespace).list();
+        var slots = client.resources(Testbed.class).inNamespace(namespace).list();
 
         return slots.getItems().stream()
                     .map(mapper::toExternal)
@@ -64,7 +64,7 @@ public class ExternalSchedulerInterfaceController {
 
     @GetMapping("/external/testbeds/{name}")
     public ExternalTestbed getTestbed(@PathVariable String name) {
-        var testbed = client.resources(Slot.class).inNamespace(namespace)
+        var testbed = client.resources(Testbed.class).inNamespace(namespace)
                             .withName(name).get();
 
         if (testbed == null)

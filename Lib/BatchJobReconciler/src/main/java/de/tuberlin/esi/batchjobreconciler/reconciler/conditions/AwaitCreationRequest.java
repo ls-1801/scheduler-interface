@@ -3,7 +3,7 @@ package de.tuberlin.esi.batchjobreconciler.reconciler.conditions;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.tuberlin.esi.batchjobreconciler.reconciler.BatchJobContext;
 import de.tuberlin.esi.common.crd.batchjob.CreationRequest;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,9 +33,9 @@ public class AwaitCreationRequest extends BatchJobCondition {
         if (creationRequestOpt.isEmpty())
             return false;
 
-        var slots = context.getSlots(creationRequestOpt.get().getSlotsName());
+        var slots = context.getSlots(creationRequestOpt.get().getTestbedName());
 
-        if (slots == null || slots.getStatus().getState() == SlotsStatusState.ERROR) {
+        if (slots == null || slots.getStatus().getState() == TestbedState.ERROR) {
             return error("Slots is set but does not exist or is in a bad state");
         }
 

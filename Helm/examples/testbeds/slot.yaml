@@ -1,5 +1,5 @@
-apiVersion: batchjob.gcr.io/v1alpha1
-kind: Slot
+apiVersion: esi.tu-berlin.de/v1alpha1
+kind: Testbed
 metadata:
   name: batchjob-slots
   namespace: test-namespace
@@ -11,8 +11,8 @@ spec:
     memory: "896Mi"
 
 ---
-apiVersion: batchjob.gcr.io/v1alpha1
-kind: Slot
+apiVersion: esi.tu-berlin.de/v1alpha1
+kind: Testbed
 metadata:
   name: profiler-slots
   namespace: test-namespace

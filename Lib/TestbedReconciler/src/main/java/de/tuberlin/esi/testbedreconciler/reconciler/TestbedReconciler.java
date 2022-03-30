@@ -3,12 +3,12 @@ package de.tuberlin.esi.testbedreconciler.reconciler;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import de.tuberlin.esi.common.crd.NamespacedName;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotOccupationStatus;
-import de.tuberlin.esi.common.crd.slots.SlotSpec;
-import de.tuberlin.esi.common.crd.slots.SlotState;
-import de.tuberlin.esi.common.crd.slots.SlotStatus;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.SlotState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
+import de.tuberlin.esi.common.crd.testbed.TestbedSpec;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
+import de.tuberlin.esi.common.crd.testbed.TestbedStatus;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
@@ -70,7 +70,7 @@ import static java.util.stream.Collectors.toSet;
 @ControllerConfiguration
 @RequiredArgsConstructor
 @Slf4j
-public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializer<Slot> {
+public class TestbedReconciler implements Reconciler<Testbed>, EventSourceInitializer<Testbed> {
 
     private final KubernetesClient kubernetesClient;
     private final String namespace;
@@ -86,14 +86,14 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
 
 
     @Override
-    public DeleteControl cleanup(Slot resource, Context context) {
+    public DeleteControl cleanup(Testbed resource, Context context) {
         log.info("Cleaning up for: {}", resource.getMetadata().getName());
         return Reconciler.super.cleanup(resource, context);
     }
 
 
     @Override
-    public UpdateControl<Slot> reconcile(Slot resource, Context context) {
+    public UpdateControl<Testbed> reconcile(Testbed resource, Context context) {
         return reconcileInternal(resource, context);
     }
 
@@ -122,7 +122,7 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
         return observed.removePodsWithProblems(podsWithProblems);
     }
 
-    private UpdateControl<Slot> reconcileInternal(Slot resource, Context context) {
+    private UpdateControl<Testbed> reconcileInternal(Testbed resource, Context context) {
         addToResourceMap(resource);
         PodsPerNode observed;
         PodList observedPods;
@@ -245,8 +245,8 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
 
     }
 
-    private UpdateControl<Slot> updateStatus(@Nonnull Slot resource, @Nonnull PodsPerNode reconciledState,
-                                             NodeList nodesWithLabel) {
+    private UpdateControl<Testbed> updateStatus(@Nonnull Testbed resource, @Nonnull PodsPerNode reconciledState,
+                                                NodeList nodesWithLabel) {
 
         var nodeNameToNodeId = nodesWithLabel.getItems().stream().collect(
                 ImmutableMap.toImmutableMap(
@@ -268,46 +268,46 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
         return UpdateControl.updateStatus(resource);
     }
 
-    private SlotsStatusState deriveSlotsStateFromSlots(SlotStatus resourceStatus,
-                                                       List<SlotOccupationStatus> slotsStatus) {
+    private TestbedState deriveSlotsStateFromSlots(TestbedStatus resourceStatus,
+                                                   List<SlotOccupationStatus> slotsStatus) {
         var anyReserved = slotsStatus.stream().anyMatch(slot -> slot.getState() == SlotState.RESERVED);
         var allFree = slotsStatus.stream().allMatch(slot -> slot.getState() == SlotState.FREE);
         var occupiedCount = slotsStatus.stream().filter(slot -> slot.getState() == SlotState.OCCUPIED).count();
         var previousState = resourceStatus.getState();
 
 
-        if (previousState.equals(SlotsStatusState.IN_PROGRESS)) {
+        if (previousState.equals(TestbedState.IN_PROGRESS)) {
             var timestamp = Optional.ofNullable(resourceStatus.getSchedulingInProgressTimestamp())
                                     .map(Instant::parse);
             if (timestamp.isPresent() && Instant.now().plus(5 * 60, ChronoUnit.SECONDS)
                                                 .isAfter(timestamp.get())) {
                 log.info("Slot in progress state has timed out, since no progress has been made in the last 5 minutes");
-                return SlotsStatusState.ERROR;
+                return TestbedState.ERROR;
             }
 
             if (!anyReserved && allFree) {
                 log.info("Slot remains in state busy, although no reservation or occupations where made");
-                return SlotsStatusState.IN_PROGRESS;
+                return TestbedState.IN_PROGRESS;
             }
 
             if (anyReserved) {
                 log.info("Slots with reservation, Slots are busy");
-                return SlotsStatusState.IN_PROGRESS;
+                return TestbedState.IN_PROGRESS;
             }
         }
 
         if (occupiedCount > 0) {
             log.info("Current scheduling was successful, jobs are running");
-            return SlotsStatusState.RUNNING;
+            return TestbedState.RUNNING;
         }
 
         if (allFree) {
             log.info("All slots are free, put into ready state");
-            return SlotsStatusState.SUCCESS;
+            return TestbedState.SUCCESS;
         }
 
         log.error("Could not determine Slots state");
-        return SlotsStatusState.ERROR;
+        return TestbedState.ERROR;
     }
 
     private void checkPreemptionStatus(ApplicationPodView pod) {
@@ -331,57 +331,57 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
             SlotProblems.SlotProblemsBuilder builder,
             NodeList nodeList,
             ClusterRequestedResources clusterRequestResources,
-            Slot slot
+            Testbed testbed
     ) {
         nodeList.getItems().forEach(node -> {
-            var problems = nodeEligibleForSlots(node, clusterRequestResources, slot.getSpec());
+            var problems = nodeEligibleForSlots(node, clusterRequestResources, testbed.getSpec());
             builder.addNodeProblems(node, problems);
         });
     }
 
 
-    private void addToResourceMap(Slot resource) {
+    private void addToResourceMap(Testbed resource) {
         var label = resource.getSpec().getNodeLabel();
         slotsByName.put(resource.getMetadata().getName(), ResourceID.fromResource(resource));
         slots.computeIfAbsent(label, (k) -> new HashSet<>()).add(ResourceID.fromResource(resource));
     }
 
-    private PodsPerNode desiredPods(NodeList nodes, Slot slot) {
+    private PodsPerNode desiredPods(NodeList nodes, Testbed testbed) {
 
         var desiredPods = nodes.getItems().stream()
                                .flatMap(node ->
-                                       IntStream.range(0, slot.getSpec().getSlotsPerNode())
-                                                .mapToObj(id -> createGhostPodForNode(node, slot, id))
+                                       IntStream.range(0, testbed.getSpec().getSlotsPerNode())
+                                                .mapToObj(id -> createGhostPodForNode(node, testbed, id))
                                ).collect(toList());
 
         return PodsPerNode.groupByNode(desiredPods);
     }
 
-    private Pod createGhostPodForNode(Node node, Slot slot, int id) {
+    private Pod createGhostPodForNode(Node node, Testbed testbed, int id) {
         var resourceRequirements = new ResourceRequirementsBuilder()
-                .withRequests(slot.getSpec().getResourcesPerSlot())
+                .withRequests(testbed.getSpec().getResourcesPerSlot())
                 .build();
 
         var ownerReference = new OwnerReferenceBuilder()
-                .withName(slot.getMetadata().getName())
-                .withApiVersion(slot.getApiVersion())
-                .withUid(slot.getMetadata().getUid())
+                .withName(testbed.getMetadata().getName())
+                .withApiVersion(testbed.getApiVersion())
+                .withUid(testbed.getMetadata().getUid())
                 .withController(Boolean.TRUE)
-                .withKind(slot.getKind())
+                .withKind(testbed.getKind())
                 .build();
 
-        var name = podNameStrategy(node.getMetadata().getName(), slot, id);
+        var name = podNameStrategy(node.getMetadata().getName(), testbed, id);
 
         var pod = new PodBuilder().withNewMetadata()
                                   .withName(name)
-                                  .withNamespace(getNamespace(slot))
+                                  .withNamespace(getNamespace(testbed))
                                   .withLabels(Map.of(
-                                          SLOT_POD_LABEL_NAME, slot.getMetadata().getName(),
+                                          SLOT_POD_LABEL_NAME, testbed.getMetadata().getName(),
                                           SLOT_POD_TARGET_NODE_NAME, node.getMetadata().getName(),
                                           SLOT_POD_SLOT_ID_NAME, "" + id,
                                           SLOT_POD_IS_GHOSTPOD_NAME, "true"))
                                   .withAnnotations(Map.of(SLOT_POD_GENERATION_NAME,
-                                          slot.getMetadata().getGeneration() + ""))
+                                          testbed.getMetadata().getGeneration() + ""))
                                   .withOwnerReferences(ownerReference)
                                   .endMetadata()
                                   .withNewSpec()
@@ -393,21 +393,21 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
                                   .endSpec()
                                   .build();
 
-        var identifiablePod = makeNodeIdentifiable(node, slot, pod);
+        var identifiablePod = makeNodeIdentifiable(node, testbed, pod);
 
         return identifiablePod;
     }
 
-    private String podNameStrategy(String nodeName, Slot slot, int id) {
+    private String podNameStrategy(String nodeName, Testbed testbed, int id) {
         return MessageFormat.format("{0}-{1}-on-{2}-{3}",
                 GHOST_POD_NAME_PREFIX,
-                slot.getMetadata().getName(),
+                testbed.getMetadata().getName(),
                 nodeName,
                 id
         );
     }
 
-    private Pod makeNodeIdentifiable(Node node, Slot slot, Pod pod) {
+    private Pod makeNodeIdentifiable(Node node, Testbed testbed, Pod pod) {
         var spec = new PodSpecBuilder(pod.getSpec())
                 .withNodeName(node.getMetadata().getName())
                 .build();
@@ -417,7 +417,7 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
 
 
     private List<SlotProblems.Problem> nodeEligibleForSlots(Node node, ClusterRequestedResources nodeRequestMap,
-                                                            SlotSpec spec) {
+                                                            TestbedSpec spec) {
         Function<String, Optional<SlotProblems.Problem>> enoughResource = (String resourceName) -> {
             var inUse = nodeRequestMap.getRequestedResources(node, resourceName);
             var capacity = node.getStatus().getAllocatable().get(resourceName);
@@ -441,9 +441,9 @@ public class TestbedReconciler implements Reconciler<Slot>, EventSourceInitializ
     }
 
     @Override
-    public List<EventSource> prepareEventSources(EventSourceContext<Slot> context) {
+    public List<EventSource> prepareEventSources(EventSourceContext<Testbed> context) {
 
-        var slotsInCluster = kubernetesClient.resources(Slot.class)
+        var slotsInCluster = kubernetesClient.resources(Testbed.class)
                                              .inNamespace(namespace).list().getItems();
 
         this.slots =

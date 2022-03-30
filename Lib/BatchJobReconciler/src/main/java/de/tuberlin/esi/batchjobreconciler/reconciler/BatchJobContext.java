@@ -6,8 +6,8 @@ import de.tuberlin.esi.common.crd.NamespacedName;
 import de.tuberlin.esi.common.crd.batchjob.BatchJob;
 import de.tuberlin.esi.common.crd.batchjob.CreationRequest;
 import de.tuberlin.esi.common.crd.scheduling.Scheduling;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
 import de.tuberlin.esi.common.statemachine.StateMachineContext;
 import io.fabric8.kubernetes.client.CustomResource;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -30,7 +30,7 @@ public class BatchJobContext implements StateMachineContext {
     @Getter
     private final ApplicationSpecific application;
     private final Map<NamespacedName, Scheduling> schedulingCache = new HashMap<>();
-    private final Map<NamespacedName, Slot> slotsCache = new HashMap<>();
+    private final Map<NamespacedName, Testbed> slotsCache = new HashMap<>();
 
 
     public BatchJobContext(BatchJob resource, KubernetesClient client) {
@@ -53,9 +53,9 @@ public class BatchJobContext implements StateMachineContext {
     }
 
     public void createApplication(CreationRequest request) {
-        var slots = getSlots(request.getSlotsName());
+        var slots = getSlots(request.getTestbedName());
 
-        if (slots == null || slots.getStatus().getState() == SlotsStatusState.ERROR)
+        if (slots == null || slots.getStatus().getState() == TestbedState.ERROR)
             throw new RuntimeException("PROBLEM: This should have been checked by the condition");
 
         if (application.isExisting()) {
@@ -83,8 +83,8 @@ public class BatchJobContext implements StateMachineContext {
     }
 
     @Nullable
-    public Slot getSlots(@Nonnull NamespacedName namespacedName) {
-        return slotsCache.computeIfAbsent(namespacedName, (nn) -> getCR(nn, Slot.class));
+    public Testbed getSlots(@Nonnull NamespacedName namespacedName) {
+        return slotsCache.computeIfAbsent(namespacedName, (nn) -> getCR(nn, Testbed.class));
     }
 
 }

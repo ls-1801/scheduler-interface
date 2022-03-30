@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.tuberlin.esi.common.crd.batchjob.BatchJob;
 import de.tuberlin.esi.common.crd.batchjob.BatchJobState;
-import de.tuberlin.esi.common.crd.slots.Slot;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import de.tuberlin.esi.testbedreconciler.reconciler.ClusterAllocatableResources;
 import de.tuberlin.esi.testbedreconciler.reconciler.ClusterAvailableResources;
 import de.tuberlin.esi.testbedreconciler.reconciler.ClusterRequestedResources;
@@ -84,7 +84,7 @@ public class DebugController {
     ) throws JsonProcessingException {
 
         var requested = ClusterRequestedResources.aggregate(client.pods().inAnyNamespace().list().getItems());
-        var testbed = client.resources(Slot.class).inNamespace(namespace).withName(testbedName).get();
+        var testbed = client.resources(Testbed.class).inNamespace(namespace).withName(testbedName).get();
         if (testbed == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     MessageFormat.format("Testbed {0} not found!", testbedName));

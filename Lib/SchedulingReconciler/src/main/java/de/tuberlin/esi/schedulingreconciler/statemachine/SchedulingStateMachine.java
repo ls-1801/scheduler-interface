@@ -146,7 +146,7 @@ public class SchedulingStateMachine {
             });
 
             getConditions(conditions, AwaitTestbedReleasedCondition.class).forEach((c) -> {
-                context.acquireSlot(c.getSlotsName());
+                context.acquireSlot(c.getTestbedName());
             });
         } catch (ClaimedByAnotherSchedulingException e) {
             log.warn(e.getMessage());
@@ -157,7 +157,7 @@ public class SchedulingStateMachine {
             });
 
             getConditions(conditions, AwaitTestbedReleasedCondition.class).forEach((c) -> {
-                context.releaseTestbedIfClaimed(c.getSlotsName());
+                context.releaseTestbedIfClaimed(c.getTestbedName());
             });
 
             AbortStateMachineSilentlyException.abort(e);

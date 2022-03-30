@@ -3,8 +3,8 @@ package de.tuberlin.esi.testbedreconciler.reconciler;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
@@ -39,11 +39,11 @@ public class SlotProblems {
         return !problems.isEmpty() || !nodeProblems.isEmpty();
     }
 
-    public UpdateControl<Slot> updateStatusIfRequired(Slot slot) {
+    public UpdateControl<Testbed> updateStatusIfRequired(Testbed testbed) {
         if (!anyProblems()) {
-            slot.getStatus().setProblems(null);
-            slot.getStatus().setNodeProblems(null);
-            return UpdateControl.updateStatus(slot);
+            testbed.getStatus().setProblems(null);
+            testbed.getStatus().setNodeProblems(null);
+            return UpdateControl.updateStatus(testbed);
         }
 
 
@@ -58,11 +58,11 @@ public class SlotProblems {
                         .map(Problem::getMessage)
                         .collect(Collectors.toList());
 
-        slot.getStatus().setNodeProblems(nodeProblemsStringMap);
-        slot.getStatus().setProblems(problemsString);
-        slot.getStatus().setState(SlotsStatusState.ERROR);
+        testbed.getStatus().setNodeProblems(nodeProblemsStringMap);
+        testbed.getStatus().setProblems(problemsString);
+        testbed.getStatus().setState(TestbedState.ERROR);
 
-        return UpdateControl.updateStatus(slot);
+        return UpdateControl.updateStatus(testbed);
     }
 
     @RequiredArgsConstructor

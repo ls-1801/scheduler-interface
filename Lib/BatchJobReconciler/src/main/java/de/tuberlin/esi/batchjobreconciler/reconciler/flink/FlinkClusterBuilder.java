@@ -2,8 +2,8 @@ package de.tuberlin.esi.batchjobreconciler.reconciler.flink;
 
 import de.tuberlin.esi.batchjobreconciler.reconciler.ApplicationBuilder;
 import de.tuberlin.esi.common.crd.batchjob.BatchJob;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -22,7 +22,7 @@ import static de.tuberlin.esi.common.constants.CommonConstants.MANAGED_BY_LABEL_
 import static de.tuberlin.esi.common.constants.CommonConstants.MANAGED_BY_LABEL_VALUE;
 
 public class FlinkClusterBuilder extends ApplicationBuilder {
-    public FlinkClusterBuilder(BatchJob job, Slot slots) {
+    public FlinkClusterBuilder(BatchJob job, Testbed slots) {
         super(job, slots);
     }
 
@@ -34,18 +34,19 @@ public class FlinkClusterBuilder extends ApplicationBuilder {
                 .ports(new V1beta1FlinkClusterSpecJobManagerPorts().ui(8081));
     }
 
-    private V1beta1FlinkClusterSpecTaskManager createTaskManagerSpec(Slot slot, List<SlotOccupationStatus> freeSlots) {
+    private V1beta1FlinkClusterSpecTaskManager createTaskManagerSpec(Testbed testbed,
+                                                                     List<SlotOccupationStatus> freeSlots) {
 
 
         // PriorityClassName + SchedulerName are set by the Flink Operator using a custom Batch Scheduler.
         return new V1beta1FlinkClusterSpecTaskManager()
                 .resources(new ResourceRequirementsBuilder()
-                        .withRequests(slot.getSpec().getResourcesPerSlot())
-                        .withLimits(slot.getSpec().getResourcesPerSlot())
+                        .withRequests(testbed.getSpec().getResourcesPerSlot())
+                        .withLimits(testbed.getSpec().getResourcesPerSlot())
                         .build())
                 .podLabels(createLabels())
                 .affinity(createAffinity())
-                .memoryOffHeapMin(slot.getSpec().getResourcesPerSlot().get("memory").toString())
+                .memoryOffHeapMin(testbed.getSpec().getResourcesPerSlot().get("memory").toString())
                 .replicas(freeSlots.size());
     }
 
@@ -64,7 +65,7 @@ public class FlinkClusterBuilder extends ApplicationBuilder {
                         .name("external"))
                 .image(new V1beta1FlinkClusterImageSpec().name("flink:1.8.2"))
                 .jobManager(createJobManagerSpec())
-                .taskManager(createTaskManagerSpec(slots, freeSlots))
+                .taskManager(createTaskManagerSpec(testbed, freeSlots))
                 .job(job.getSpec().getFlinkSpec())
                 .flinkProperties(Map.of("taskmanager.numberOfTaskSlots", "1"));
 

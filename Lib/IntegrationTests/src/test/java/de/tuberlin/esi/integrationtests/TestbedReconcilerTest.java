@@ -1,10 +1,10 @@
 package de.tuberlin.esi.integrationtests;
 
 import de.tuberlin.esi.common.crd.NamespacedName;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotSpec;
-import de.tuberlin.esi.common.crd.slots.SlotStatus;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
+import de.tuberlin.esi.common.crd.testbed.TestbedSpec;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
+import de.tuberlin.esi.common.crd.testbed.TestbedStatus;
 import de.tuberlin.esi.testbedreconciler.reconciler.ApplicationPodView;
 import de.tuberlin.esi.testbedreconciler.reconciler.TestbedReconciler;
 import io.fabric8.kubernetes.api.model.Quantity;
@@ -39,8 +39,8 @@ import static org.awaitility.Awaitility.await;
 @EnableKubernetesMockClient(https = false, crud = true)
 class TestbedReconcilerTest extends BaseReconcilerTest {
 
-    private Slot createSlot(@Nonnull SlotSpec spec, @Nullable SlotStatus status) {
-        var slot = new Slot();
+    private Testbed createSlot(@Nonnull TestbedSpec spec, @Nullable TestbedStatus status) {
+        var slot = new Testbed();
         slot.getMetadata().setNamespace(NAMESPACE);
         slot.getMetadata().setName(TEST_SLOT_NAME_1);
         slot.getMetadata().setUid(UUID.randomUUID().toString());
@@ -53,15 +53,15 @@ class TestbedReconcilerTest extends BaseReconcilerTest {
 
     @Test
     void testPreemption() {
-        var slotClient = client.resources(Slot.class);
-        slotClient.inNamespace(NAMESPACE).create(createSlot(SlotSpec.builder()
-                                                                    .nodeLabel(TEST_NODE_LABEL_1)
-                                                                    .slotsPerNode(2)
-                                                                    .resourcesPerSlot(Map.of(
-                                                                            "cpu", new Quantity("1000m"),
-                                                                            "memory", new Quantity("300M")
-                                                                    ))
-                                                                    .build(), null));
+        var slotClient = client.resources(Testbed.class);
+        slotClient.inNamespace(NAMESPACE).create(createSlot(TestbedSpec.builder()
+                                                                       .nodeLabel(TEST_NODE_LABEL_1)
+                                                                       .slotsPerNode(2)
+                                                                       .resourcesPerSlot(Map.of(
+                                                                               "cpu", new Quantity("1000m"),
+                                                                               "memory", new Quantity("300M")
+                                                                       ))
+                                                                       .build(), null));
 
         addLabelToNode(TEST_NODE_NAMES[0], TEST_NODE_LABEL_1, "0");
         addLabelToNode(TEST_NODE_NAMES[1], TEST_NODE_LABEL_1, "1");
@@ -70,7 +70,7 @@ class TestbedReconcilerTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots();
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(4);
         });
 
@@ -172,21 +172,21 @@ class TestbedReconcilerTest extends BaseReconcilerTest {
     @Test
     void testScalingUpAndDoneWhenNodesAreChanging() {
 
-        var slotClient = client.resources(Slot.class);
-        slotClient.inNamespace(NAMESPACE).create(createSlot(SlotSpec.builder()
-                                                                    .nodeLabel(TEST_NODE_LABEL_1)
-                                                                    .slotsPerNode(2)
-                                                                    .resourcesPerSlot(Map.of(
-                                                                            "cpu", new Quantity("1000m"),
-                                                                            "memory", new Quantity("300M")
-                                                                    ))
-                                                                    .build(), null));
+        var slotClient = client.resources(Testbed.class);
+        slotClient.inNamespace(NAMESPACE).create(createSlot(TestbedSpec.builder()
+                                                                       .nodeLabel(TEST_NODE_LABEL_1)
+                                                                       .slotsPerNode(2)
+                                                                       .resourcesPerSlot(Map.of(
+                                                                               "cpu", new Quantity("1000m"),
+                                                                               "memory", new Quantity("300M")
+                                                                       ))
+                                                                       .build(), null));
 
 
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots();
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
         });
 
         var updatedNode = addLabelToNode(TEST_NODE_NAMES[0], TEST_NODE_LABEL_1, "0");
@@ -195,7 +195,7 @@ class TestbedReconcilerTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots();
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(2);
         });
 
@@ -205,7 +205,7 @@ class TestbedReconcilerTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots();
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(4);
         });
 
@@ -217,7 +217,7 @@ class TestbedReconcilerTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots();
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(8);
         });
 
@@ -229,7 +229,7 @@ class TestbedReconcilerTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots();
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(4);
         });
 
@@ -243,6 +243,6 @@ class TestbedReconcilerTest extends BaseReconcilerTest {
 
     @Override
     protected void registerCRDs() {
-        createCRDFromResource("slots.batchjob.gcr.io-v1.yml");
+        createCRDFromResource("slots.esi.tu-berlin.de-v1.yml");
     }
 }

@@ -14,7 +14,7 @@ public class AwaitTestbedAcquiredCondition extends SchedulingCondition {
 
     @Getter
     @Setter
-    private NamespacedName slotsName;
+    private NamespacedName testbedName;
 
     @Override
     public String getCondition() {
@@ -42,6 +42,6 @@ public class AwaitTestbedAcquiredCondition extends SchedulingCondition {
     public void initialize(SchedulingContext context) {
         super.initialize(context);
         // Testbed might not exist, however the spec requires that it is at least specified
-        this.slotsName = getNullSafe(() -> context.getResource().getSpec().getSlots()).orElse(null);
+        this.testbedName = getNullSafe(() -> context.getResource().getSpec().getTestbed()).orElse(null);
     }
 }

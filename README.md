@@ -38,8 +38,8 @@ Applications.
 Create the Testbed resources
 
 ```yaml
-apiVersion: batchjob.gcr.io/v1alpha1
-kind: Slot
+apiVersion: esi.tu-berlin.de/v1alpha1
+kind: Testbed
 metadata:
   name: scheduler-slots
   namespace: default
@@ -52,8 +52,8 @@ spec:
 ```
 
 ```yaml
-apiVersion: batchjob.gcr.io/v1alpha1
-kind: Slot
+apiVersion: esi.tu-berlin.de/v1alpha1
+kind: Testbed
 metadata:
   name: profiler-slots
   namespace: default

@@ -2,11 +2,11 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: slots.batchjob.gcr.io
+  name: slots.esi.tu-berlin.de
 spec:
-  group: batchjob.gcr.io
+  group: esi.tu-berlin.de
   names:
-    kind: Slot
+    kind: Testbed
     plural: slots
     shortNames:
       - slot

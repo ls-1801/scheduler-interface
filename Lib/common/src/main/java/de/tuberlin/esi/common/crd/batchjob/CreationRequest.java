@@ -14,6 +14,6 @@ import java.util.Set;
 @Jacksonized
 public class CreationRequest {
     Set<Integer> slotIds;
-    NamespacedName slotsName;
+    NamespacedName testbedName;
     int replication;
 }

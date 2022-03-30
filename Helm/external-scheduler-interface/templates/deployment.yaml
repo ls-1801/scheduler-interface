@@ -185,37 +185,37 @@ metadata:
   namespace: {{.Release.Namespace | quote }}
 rules:
   - apiGroups:
-      - batchjob.gcr.io
+      - esi.tu-berlin.de
     resources:
       - schedulings
     verbs:
       - "*"
   - apiGroups:
-      - batchjob.gcr.io
+      - esi.tu-berlin.de
     resources:
       - schedulings/status
     verbs:
       - "*"
   - apiGroups:
-      - batchjob.gcr.io
+      - esi.tu-berlin.de
     resources:
-      - slots
+      - testbeds
     verbs:
       - "*"
   - apiGroups:
-      - batchjob.gcr.io
+      - esi.tu-berlin.de
     resources:
-      - slots/status
+      - testbeds/status
     verbs:
       - "*"
   - apiGroups:
-      - batchjob.gcr.io
+      - esi.tu-berlin.de
     resources:
       - batchjobs
     verbs:
       - "*"
   - apiGroups:
-      - batchjob.gcr.io
+      - esi.tu-berlin.de
     resources:
       - batchjobs/status
     verbs:

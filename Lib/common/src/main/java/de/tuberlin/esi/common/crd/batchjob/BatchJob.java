@@ -7,10 +7,9 @@ import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.ShortNames;
 import io.fabric8.kubernetes.model.annotation.Version;
 
-@Group("batchjob.gcr.io")
+@Group("esi.tu-berlin.de")
 @Version("v1alpha1")
-@ShortNames("job")
-
+@ShortNames("bj")
 public class BatchJob extends CustomResource<BatchJobSpec, BatchJobStatus> implements Namespaced {
     @Override
     protected BatchJobStatus initStatus() {

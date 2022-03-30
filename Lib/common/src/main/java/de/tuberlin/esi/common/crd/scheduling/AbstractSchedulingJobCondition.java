@@ -28,7 +28,7 @@ public class AbstractSchedulingJobCondition {
     @Nullable
     protected String lastUpdateTimestamp;
     @Nullable
-    protected NamespacedName slotsName;
+    protected NamespacedName testbedName;
     @Nullable
     protected String error;
 

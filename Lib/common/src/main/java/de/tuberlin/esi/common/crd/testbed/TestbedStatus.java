@@ -1,4 +1,4 @@
-package de.tuberlin.esi.common.crd.slots;
+package de.tuberlin.esi.common.crd.testbed;
 
 import io.javaoperatorsdk.operator.api.ObservedGenerationAwareStatus;
 import lombok.Getter;
@@ -18,8 +18,8 @@ import java.util.TreeSet;
 @Getter
 @Setter
 @ToString
-public class SlotStatus extends ObservedGenerationAwareStatus {
-    private SlotsStatusState state = SlotsStatusState.INITIAL;
+public class TestbedStatus extends ObservedGenerationAwareStatus {
+    private TestbedState state = TestbedState.INITIAL;
     @Nullable
     private Map<String, List<String>> nodeProblems;
 

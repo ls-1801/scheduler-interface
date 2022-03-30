@@ -1,4 +1,4 @@
-package de.tuberlin.esi.common.crd.slots;
+package de.tuberlin.esi.common.crd.testbed;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 

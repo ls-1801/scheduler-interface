@@ -5,10 +5,12 @@
 
     <packaging>pom</packaging>
     <groupId>de.tuberlin</groupId>
-    <artifactId>BatchJobOperator</artifactId>
+    <artifactId>ExternalSchedulerInterface</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>BatchJobOperator</name>
-    <description>BatchJobOperator</description>
+    <name>ExternalSchedulerInterface</name>
+    <description>ExternalSchedulerInterface allows scheduling of distributed data flow applications on
+        Kubernetes with a simple interface
+    </description>
     <modules>
         <module>Helm</module>
         <module>ExampleScheduler</module>

@@ -5,7 +5,7 @@ import de.tuberlin.esi.common.crd.batchjob.BatchJob;
 import de.tuberlin.esi.common.crd.scheduling.AbstractSchedulingJobCondition;
 import de.tuberlin.esi.common.crd.scheduling.Scheduling;
 import de.tuberlin.esi.common.crd.scheduling.SchedulingState;
-import de.tuberlin.esi.common.crd.slots.Slot;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import de.tuberlin.esi.common.statemachine.UpdateResult;
 import de.tuberlin.esi.schedulingreconciler.statemachine.SchedulingConditionProvider;
 import de.tuberlin.esi.schedulingreconciler.statemachine.SchedulingContext;
@@ -70,14 +70,14 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
                       .inNamespace(namespace)
                       .runnableInformer(1000);
 
-        SharedIndexInformer<Slot> slotsInformer =
-                client.resources(Slot.class)
+        SharedIndexInformer<Testbed> testbedInformer =
+                client.resources(Testbed.class)
                       .inNamespace(namespace)
                       .runnableInformer(1000);
 
         return List.of(
                 new InformerEventSource<>(batchJobInformer, (k) -> this.schedulings, null, !testmode),
-                new InformerEventSource<>(slotsInformer, (k) -> this.schedulings, null, !testmode)
+                new InformerEventSource<>(testbedInformer, (k) -> this.schedulings, null, !testmode)
         );
     }
 
@@ -125,7 +125,7 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
                                           .map(AbstractSchedulingJobCondition::getCondition)
                                           .collect(Collectors.toSet())));
 
-        log.debug("Slot:       {}", context.getSecondaryResource(Slot.class).orElse(null));
+        log.debug("Testbed:    {}", context.getSecondaryResource(Testbed.class).orElse(null));
         log.debug("Job:        {}", context.getSecondaryResource(BatchJob.class).orElse(null));
 
         log.debug("RetryCount/LastAttempt: {}", context.getRetryInfo()
@@ -191,7 +191,7 @@ public class SchedulingReconciler implements Reconciler<Scheduling>, EventSource
     public DeleteControl cleanup(Scheduling resource, Context context) {
         log.info("Cleaning up for: {}", resource.getMetadata().getName());
         var schedulingContext = new SchedulingContext(resource, client);
-        client.resources(Slot.class).inNamespace(namespace).withLabels(
+        client.resources(Testbed.class).inNamespace(namespace).withLabels(
                       Map.of(ACTIVE_SCHEDULING_LABEL_NAME,
                               resource.getMetadata().getName(),
                               ACTIVE_SCHEDULING_LABEL_NAMESPACE,

@@ -6,9 +6,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import de.tuberlin.esi.common.crd.batchjob.BatchJob;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotOccupationStatus;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.Builder;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class VerifiedReleaseFromQueueRequest {
     ImmutableList<BatchJob> jobs;
     ImmutableList<Node> nodes;
-    Slot slot;
+    Testbed testbed;
     ReleaseFromQueueRequest request;
     Supplier<Map<BatchJob, List<SlotOccupationStatus>>> jobSlotPairing =
             Suppliers.memoize(this::getJobSlotPairingInternal);
@@ -38,7 +38,7 @@ public class VerifiedReleaseFromQueueRequest {
         var builder = VerifiedReleaseFromQueueRequest.builder();
 
         builder.request(request);
-        var slot = client.resources(Slot.class)
+        var slot = client.resources(Testbed.class)
                          .inNamespace(namespace)
                          .withName(request.getSlotName()).get();
 
@@ -49,7 +49,7 @@ public class VerifiedReleaseFromQueueRequest {
         if (slot.getStatus().getSlots() == null) {
             throw new RuntimeException("Slot does not appear to be in a valid state");
         }
-        builder.slot(slot);
+        builder.testbed(slot);
 
 
         if (slot.getStatus().getSlots().size() < request.getJobs().size()) {
@@ -57,7 +57,7 @@ public class VerifiedReleaseFromQueueRequest {
                     request.getJobs().size(), slot.getStatus().getSlots().size()));
         }
 
-        if (slot.getStatus().getState() == SlotsStatusState.IN_PROGRESS)
+        if (slot.getStatus().getState() == TestbedState.IN_PROGRESS)
             throw new RuntimeException("Slot is in Progress");
 
         var distinctJobs = ImmutableSet.copyOf(request.getJobs());
@@ -91,17 +91,17 @@ public class VerifiedReleaseFromQueueRequest {
 
     private Map<String, String> getNodesSlotIdsInternal() {
         return nodes.stream()
-                    .filter(n -> n.getMetadata().getLabels().get(slot.getSpec().getNodeLabel()) != null)
+                    .filter(n -> n.getMetadata().getLabels().get(testbed.getSpec().getNodeLabel()) != null)
                     .collect(ImmutableMap.toImmutableMap(
                             n -> n.getMetadata().getName(),
-                            n -> n.getMetadata().getLabels().get(slot.getSpec().getNodeLabel())));
+                            n -> n.getMetadata().getLabels().get(testbed.getSpec().getNodeLabel())));
     }
 
     private Map<BatchJob, List<SlotOccupationStatus>> getJobSlotPairingInternal() {
         var map =
                 Streams.zip(
                                request.getJobs().stream(),
-                               slot.getStatus().getSlots().stream(),
+                               testbed.getStatus().getSlots().stream(),
                                Pair::of)
                        .limit(request.getJobs().size())
                        .collect(Collectors.groupingBy(p -> jobs.stream()

@@ -6,8 +6,8 @@ import de.tuberlin.esi.common.crd.scheduling.Scheduling;
 import de.tuberlin.esi.common.crd.scheduling.SchedulingJobState;
 import de.tuberlin.esi.common.crd.scheduling.SlotScheduling;
 import de.tuberlin.esi.common.crd.scheduling.SlotSchedulingItem;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import org.mapstruct.Context;
 import org.mapstruct.InheritInverseConfiguration;
 import org.mapstruct.Mapper;
@@ -28,7 +28,7 @@ public interface ExternalMapper {
     @Mapping(expression = "java(internal.getStatus().getSlots().size() / internal.getSpec().getSlotsPerNode())",
             target = "numberOfNodes")
     @Mapping(target = "numberOfSlotsPerNode", source = "spec.slotsPerNode")
-    ExternalTestbed toExternal(Slot internal);
+    ExternalTestbed toExternal(Testbed internal);
 
     @Mapping(source = "metadata.name", target = "name")
     @Mapping(source = "status.state", target = "state")
@@ -43,7 +43,7 @@ public interface ExternalMapper {
     @Mapping(source = "spec.queueBased", target = "queue")
     @Mapping(source = "status.jobStates", target = "jobStatus")
     @Mapping(source = "metadata.name", target = "name")
-    @Mapping(source = "spec.slots", target = "testBed")
+    @Mapping(source = "spec.testbed", target = "testBed")
     @Mapping(source = "status.state", target = "state")
     ExternalScheduling toExternal(Scheduling internal);
 

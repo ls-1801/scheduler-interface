@@ -1,6 +1,6 @@
 package de.tuberlin.esi.testbedreconciler.problems;
 
-import de.tuberlin.esi.common.crd.slots.Slot;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import de.tuberlin.esi.testbedreconciler.reconciler.ApplicationPodView;
 
 import java.text.MessageFormat;
@@ -15,7 +15,7 @@ public class NoFreeSlotsException extends RuntimeException {
         super(message);
     }
 
-    public static NoFreeSlotsException create(ApplicationPodView requestPod, Set<Integer> slotIds, Slot slots) {
+    public static NoFreeSlotsException create(ApplicationPodView requestPod, Set<Integer> slotIds, Testbed slots) {
         var invalidIds = slotIds.stream()
                                 .filter(id -> Objects.requireNonNull(slots.getStatus().getSlots()).stream()
                                                      .noneMatch(slot -> slot.getPosition() == id))

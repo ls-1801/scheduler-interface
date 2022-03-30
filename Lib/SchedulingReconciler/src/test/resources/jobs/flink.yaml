@@ -1,4 +1,4 @@
-apiVersion: batchjob.gcr.io/v1alpha1
+apiVersion: esi.tu-berlin.de/v1alpha1
 kind: BatchJob
 metadata:
   name: batchjob-flink

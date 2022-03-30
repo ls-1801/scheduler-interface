@@ -2,7 +2,7 @@ package de.tuberlin.esi.batchjobreconciler.reconciler.spark;
 
 import de.tuberlin.esi.batchjobreconciler.reconciler.ApplicationBuilder;
 import de.tuberlin.esi.common.crd.batchjob.BatchJob;
-import de.tuberlin.esi.common.crd.slots.Slot;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import k8s.sparkoperator.SparkApplication;
@@ -19,7 +19,7 @@ import static de.tuberlin.esi.common.constants.CommonConstants.MANAGED_BY_LABEL_
 @Slf4j
 public class SparkApplicationBuilder extends ApplicationBuilder {
 
-    public SparkApplicationBuilder(BatchJob job, Slot slots) {
+    public SparkApplicationBuilder(BatchJob job, Testbed slots) {
         super(job, slots);
     }
 
@@ -48,11 +48,11 @@ public class SparkApplicationBuilder extends ApplicationBuilder {
 
         sparkApp.getSpec().getExecutor()
                 .cores(1)//TODO: Check if the cpu counts need to be adjusted for slot sizes greater than 1000m CPU
-                .coreRequest(slots.getSpec().getResourcesPerSlot().get("cpu").toString())
+                .coreRequest(testbed.getSpec().getResourcesPerSlot().get("cpu").toString())
                 .labels(createLabels())
                 .affinity(createAffinity())
                 .memoryOverhead("0m")
-                .memory(quantityToSparkMemory(slots.getSpec().getResourcesPerSlot().get("memory")))
+                .memory(quantityToSparkMemory(testbed.getSpec().getResourcesPerSlot().get("memory")))
                 .schedulerName("external-scheduler")
                 .instances(freeSlots.size())
                 .cores(1);

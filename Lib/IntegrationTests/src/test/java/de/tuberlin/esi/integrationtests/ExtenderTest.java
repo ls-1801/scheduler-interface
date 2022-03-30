@@ -1,10 +1,10 @@
 package de.tuberlin.esi.integrationtests;
 
 import de.tuberlin.esi.common.crd.NamespacedName;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotSpec;
-import de.tuberlin.esi.common.crd.slots.SlotStatus;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
+import de.tuberlin.esi.common.crd.testbed.TestbedSpec;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
+import de.tuberlin.esi.common.crd.testbed.TestbedStatus;
 import de.tuberlin.esi.testbedreconciler.extender.ExtenderController;
 import de.tuberlin.esi.testbedreconciler.reconciler.ApplicationPodView;
 import de.tuberlin.esi.testbedreconciler.reconciler.TestbedReconciler;
@@ -54,11 +54,11 @@ public class ExtenderTest extends BaseReconcilerTest {
 
     @Override
     protected void registerCRDs() {
-        createCRDFromResource("slots.batchjob.gcr.io-v1.yml");
+        createCRDFromResource("slots.esi.tu-berlin.de-v1.yml");
     }
 
-    private Slot createSlot(String name, @Nonnull SlotSpec spec, @Nullable SlotStatus status) {
-        var slot = new Slot();
+    private Testbed createSlot(String name, @Nonnull TestbedSpec spec, @Nullable TestbedStatus status) {
+        var slot = new Testbed();
         slot.getMetadata().setNamespace(NAMESPACE);
         slot.getMetadata().setName(name);
         slot.getMetadata().setUid(UUID.randomUUID().toString());
@@ -71,17 +71,17 @@ public class ExtenderTest extends BaseReconcilerTest {
 
     @Test
     public void testFilter() {
-        var slotClient = client.resources(Slot.class);
-        slotClient.inNamespace(NAMESPACE).create(createSlot(TEST_SLOT_NAME_1, SlotSpec.builder()
-                                                                                      .nodeLabel(TEST_NODE_LABEL_1)
-                                                                                      .slotsPerNode(3)
-                                                                                      .resourcesPerSlot(Map.of(
-                                                                                              "cpu", new Quantity(
-                                                                                                      "500m"),
-                                                                                              "memory", new Quantity(
-                                                                                                      "4Gi")
-                                                                                      ))
-                                                                                      .build(), null));
+        var slotClient = client.resources(Testbed.class);
+        slotClient.inNamespace(NAMESPACE).create(createSlot(TEST_SLOT_NAME_1, TestbedSpec.builder()
+                                                                                         .nodeLabel(TEST_NODE_LABEL_1)
+                                                                                         .slotsPerNode(3)
+                                                                                         .resourcesPerSlot(Map.of(
+                                                                                                 "cpu", new Quantity(
+                                                                                                         "500m"),
+                                                                                                 "memory", new Quantity(
+                                                                                                         "4Gi")
+                                                                                         ))
+                                                                                         .build(), null));
 
         addLabelToNode(TEST_NODE_NAMES[0], TEST_NODE_LABEL_1, "0");
         addLabelToNode(TEST_NODE_NAMES[1], TEST_NODE_LABEL_1, "1");
@@ -91,7 +91,7 @@ public class ExtenderTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots();
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(12);
             updatedSlot.getStatus().getSlots().forEach(occ -> assertThat(occ.getPodUId()).isNotNull());
         });
@@ -119,7 +119,7 @@ public class ExtenderTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots();
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.RUNNING);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.RUNNING);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(12);
             updatedSlot.getStatus().getSlots().forEach(occ -> assertThat(occ.getPodUId()).isNotNull());
 
@@ -143,26 +143,26 @@ public class ExtenderTest extends BaseReconcilerTest {
 
     @Test
     public void testFilterWithMultipleSlots() {
-        var slotClient = client.resources(Slot.class);
+        var slotClient = client.resources(Testbed.class);
         slotClient.inNamespace(NAMESPACE).create(
-                createSlot(TEST_SLOT_NAME_1, SlotSpec.builder()
-                                                     .nodeLabel(TEST_NODE_LABEL_1)
-                                                     .slotsPerNode(3)
-                                                     .resourcesPerSlot(Map.of(
-                                                             "cpu", new Quantity("500m"),
-                                                             "memory", new Quantity("4Gi")
-                                                     ))
-                                                     .build(), null));
+                createSlot(TEST_SLOT_NAME_1, TestbedSpec.builder()
+                                                        .nodeLabel(TEST_NODE_LABEL_1)
+                                                        .slotsPerNode(3)
+                                                        .resourcesPerSlot(Map.of(
+                                                                "cpu", new Quantity("500m"),
+                                                                "memory", new Quantity("4Gi")
+                                                        ))
+                                                        .build(), null));
 
         slotClient.inNamespace(NAMESPACE).create(
-                createSlot(TEST_SLOT_NAME_2, SlotSpec.builder()
-                                                     .nodeLabel(TEST_NODE_LABEL_2)
-                                                     .slotsPerNode(2)
-                                                     .resourcesPerSlot(Map.of(
-                                                             "cpu", new Quantity("1000m"),
-                                                             "memory", new Quantity("4Gi")
-                                                     ))
-                                                     .build(), null));
+                createSlot(TEST_SLOT_NAME_2, TestbedSpec.builder()
+                                                        .nodeLabel(TEST_NODE_LABEL_2)
+                                                        .slotsPerNode(2)
+                                                        .resourcesPerSlot(Map.of(
+                                                                "cpu", new Quantity("1000m"),
+                                                                "memory", new Quantity("4Gi")
+                                                        ))
+                                                        .build(), null));
 
 
         addLabelToNode(TEST_NODE_NAMES[0], TEST_NODE_LABEL_1, "0");
@@ -174,7 +174,7 @@ public class ExtenderTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots(TEST_SLOT_NAME_1);
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(9);
             updatedSlot.getStatus().getSlots().forEach(occ -> assertThat(occ.getPodUId()).isNotNull());
 
@@ -183,7 +183,7 @@ public class ExtenderTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots(TEST_SLOT_NAME_2);
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(2);
             updatedSlot.getStatus().getSlots().forEach(occ -> assertThat(occ.getPodUId()).isNotNull());
         });
@@ -227,7 +227,7 @@ public class ExtenderTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots(TEST_SLOT_NAME_1);
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.RUNNING);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.RUNNING);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(9);
             updatedSlot.getStatus().getSlots().forEach(occ -> assertThat(occ.getPodUId()).isNotNull());
 
@@ -250,7 +250,7 @@ public class ExtenderTest extends BaseReconcilerTest {
         await().atMost(TIMEOUT_DURATION_IN_SECONDS, TimeUnit.SECONDS).untilAsserted(() -> {
             var updatedSlot = getSlots(TEST_SLOT_NAME_2);
             assertThat(updatedSlot.getStatus().getObservedGeneration()).isGreaterThan(0);
-            assertThat(updatedSlot.getStatus().getState()).isEqualTo(SlotsStatusState.RUNNING);
+            assertThat(updatedSlot.getStatus().getState()).isEqualTo(TestbedState.RUNNING);
             assertThat(updatedSlot.getStatus().getSlots()).isNotNull().hasSize(2);
             updatedSlot.getStatus().getSlots().forEach(occ -> assertThat(occ.getPodUId()).isNotNull());
 

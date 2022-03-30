@@ -7,9 +7,9 @@ import io.fabric8.kubernetes.model.annotation.ShortNames;
 import io.fabric8.kubernetes.model.annotation.Version;
 
 
-@Group("batchjob.gcr.io")
+@Group("esi.tu-berlin.de")
 @Version("v1alpha1")
-@ShortNames("scheduling")
+@ShortNames("sched")
 public class Scheduling extends CustomResource<SchedulingSpec, SchedulingStatus> implements Namespaced {
     @Override
     protected SchedulingStatus initStatus() {

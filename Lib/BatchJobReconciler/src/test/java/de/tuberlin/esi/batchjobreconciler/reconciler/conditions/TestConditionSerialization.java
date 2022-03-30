@@ -34,7 +34,7 @@ public class TestConditionSerialization {
                 "      \"name\": \"SparkJob1\",\n" +
                 "      \"namespace\": \"SparkJob1\"\n" +
                 "    },\n" + "    " +
-                "    \"slotsName\": {\n" +
+                "    \"testbedName\": {\n" +
                 "      \"name\": \"Slot1\",\n" +
                 "      \"namespace\": \"Slot1\"\n" +
                 "    },\n" +
@@ -49,8 +49,8 @@ public class TestConditionSerialization {
         assertThat(desConditions)
                 .hasSize(1)
                 .extracting("condition", "name.name", "name.namespace", "value", "error", "numberOfSlotsRequired",
-                        "slotsName.name",
-                        "slotsName.namespace")
+                        "testbedName.name",
+                        "testbedName.namespace")
                 .containsExactlyInAnyOrder(
                         Tuple.tuple("AwaitingNumberOfSlotsAvailable", "SparkJob1", "SparkJob1", true, "yesError", 2,
                                 "Slot1", "Slot1"));

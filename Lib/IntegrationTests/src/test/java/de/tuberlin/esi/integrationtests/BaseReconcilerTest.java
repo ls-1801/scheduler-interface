@@ -12,13 +12,13 @@ import de.tuberlin.esi.common.crd.batchjob.CreationRequest;
 import de.tuberlin.esi.common.crd.scheduling.Scheduling;
 import de.tuberlin.esi.common.crd.scheduling.SchedulingSpec;
 import de.tuberlin.esi.common.crd.scheduling.SchedulingState;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotIDsAnnotationString;
-import de.tuberlin.esi.common.crd.slots.SlotOccupationStatus;
-import de.tuberlin.esi.common.crd.slots.SlotSpec;
-import de.tuberlin.esi.common.crd.slots.SlotState;
-import de.tuberlin.esi.common.crd.slots.SlotStatus;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.SlotIDsAnnotationString;
+import de.tuberlin.esi.common.crd.testbed.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.SlotState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
+import de.tuberlin.esi.common.crd.testbed.TestbedSpec;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
+import de.tuberlin.esi.common.crd.testbed.TestbedStatus;
 import de.tuberlin.esi.common.reconcilers.CustomClonerConfigurationService;
 import de.tuberlin.esi.schedulingreconciler.statemachine.SchedulingJobConditionDeserializer;
 import io.fabric8.kubernetes.api.model.Node;
@@ -75,7 +75,7 @@ import static de.tuberlin.esi.common.constants.SlotsConstants.SLOT_POD_IS_GHOSTP
 import static de.tuberlin.esi.common.constants.SlotsConstants.SLOT_POD_LABEL_NAME;
 import static de.tuberlin.esi.common.constants.SlotsConstants.SLOT_POD_SLOT_ID_NAME;
 import static de.tuberlin.esi.common.constants.SlotsConstants.SLOT_POD_TARGET_NODE_NAME;
-import static de.tuberlin.esi.common.crd.slots.SlotsStatusState.SUCCESS;
+import static de.tuberlin.esi.common.crd.testbed.TestbedState.SUCCESS;
 import static de.tuberlin.esi.common.util.General.enumerate;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -149,9 +149,9 @@ public abstract class BaseReconcilerTest {
     protected void updateSlots(NamespacedName name,
                                Set<Integer> busySlots,
                                Set<Integer> reserveSlots,
-                               SlotsStatusState state) {
+                               TestbedState state) {
 
-        var updated = client.resources(Slot.class).inNamespace(name.getNamespace()).withName(name.getName())
+        var updated = client.resources(Testbed.class).inNamespace(name.getNamespace()).withName(name.getName())
                             .editStatus((slots) -> {
                                 log.info("Free Slots Before: {}",
                                         slots.getStatus().getSlots().stream()
@@ -180,7 +180,7 @@ public abstract class BaseReconcilerTest {
 
     }
 
-    protected void updateSlots(Set<Integer> busySlots, Set<Integer> reserveSlots, SlotsStatusState state) {
+    protected void updateSlots(Set<Integer> busySlots, Set<Integer> reserveSlots, TestbedState state) {
         updateSlots(new NamespacedName(TEST_SLOT_NAME_1, NAMESPACE), busySlots, reserveSlots, state);
     }
 
@@ -197,8 +197,8 @@ public abstract class BaseReconcilerTest {
         claimSlot(defaultSlot(), scheduling);
     }
 
-    protected void claimSlot(NamespacedName slotsName, NamespacedName scheduling) {
-        client.resources(Slot.class).inNamespace(slotsName.getNamespace()).withName(slotsName.getName())
+    protected void claimSlot(NamespacedName testbedName, NamespacedName scheduling) {
+        client.resources(Testbed.class).inNamespace(testbedName.getNamespace()).withName(testbedName.getName())
               .editStatus((slots) -> {
 
                   if (slots.getMetadata().getLabels() == null) {
@@ -272,7 +272,7 @@ public abstract class BaseReconcilerTest {
         scheduling.getMetadata().setNamespace(schedulingName.getNamespace());
 
         var spec = new SchedulingSpec();
-        spec.setSlots(slots);
+        spec.setTestbed(slots);
         spec.setQueueBased(jobNames.stream()
                                    .map(jobName -> new NamespacedName(jobName, jobsNamespace))
                                    .collect(Collectors.toList()));
@@ -280,34 +280,34 @@ public abstract class BaseReconcilerTest {
         return client.resources(Scheduling.class).inNamespace(schedulingName.getNamespace()).create(scheduling);
     }
 
-    protected Slot getSlots(String name) {
-        return client.resources(Slot.class).inNamespace(NAMESPACE).withName(name).get();
+    protected Testbed getSlots(String name) {
+        return client.resources(Testbed.class).inNamespace(NAMESPACE).withName(name).get();
     }
 
-    protected Slot getSlots() {
+    protected Testbed getSlots() {
         return getSlots(TEST_SLOT_NAME_1);
     }
 
-    protected Slot createSlot() {
+    protected Testbed createSlot() {
         return createSlot(SlotConfiguration.builder().build());
     }
 
-    protected Slot createSlot(SlotConfiguration configuration) {
-        var slot = new Slot();
+    protected Testbed createSlot(SlotConfiguration configuration) {
+        var slot = new Testbed();
         slot.getMetadata().setName(configuration.getName());
         slot.getMetadata().setNamespace(configuration.getNamespace());
 
 
-        var status = new SlotStatus();
-        var spec = SlotSpec.builder()
-                           .nodeLabel(configuration.labelName)
-                           .slotsPerNode(configuration.slotsPerNode)
-                           .resourcesPerSlot(configuration.resourcesPerSlot)
-                           .build();
+        var status = new TestbedStatus();
+        var spec = TestbedSpec.builder()
+                              .nodeLabel(configuration.labelName)
+                              .slotsPerNode(configuration.slotsPerNode)
+                              .resourcesPerSlot(configuration.resourcesPerSlot)
+                              .build();
 
         slot.setSpec(spec);
 
-        slot = client.resources(Slot.class).inNamespace(configuration.namespace).create(slot);
+        slot = client.resources(Testbed.class).inNamespace(configuration.namespace).create(slot);
         if (configuration.mock) {
             status.setState(SUCCESS);
 
@@ -331,7 +331,7 @@ public abstract class BaseReconcilerTest {
 
 
             slot.setStatus(status);
-            slot = client.resources(Slot.class).inNamespace(configuration.namespace).replaceStatus(slot);
+            slot = client.resources(Testbed.class).inNamespace(configuration.namespace).replaceStatus(slot);
             assertThat(slot.getStatus().getSlots()).isNotNull();
         }
         else {
@@ -682,7 +682,7 @@ public abstract class BaseReconcilerTest {
         editJob.getStatus().setActiveScheduling(editJob.getSpec().getActiveScheduling());
 
         if (editJob.getSpec().getCreationRequest() != null) {
-            editJob.getStatus().setSlots(editJob.getSpec().getCreationRequest().getSlotsName());
+            editJob.getStatus().setSlots(editJob.getSpec().getCreationRequest().getTestbedName());
             editJob.getStatus().setReplication(editJob.getSpec().getCreationRequest().getReplication());
             editJob.getStatus().setSlotIds(editJob.getSpec().getCreationRequest().getSlotIds());
         }
@@ -706,7 +706,7 @@ public abstract class BaseReconcilerTest {
         scheduling.getMetadata().setNamespace(namespace);
 
         var spec = new SchedulingSpec();
-        spec.setSlots(new NamespacedName(testbedName, namespace));
+        spec.setTestbed(new NamespacedName(testbedName, namespace));
         spec.setQueueBased(jobNames.stream()
                                    .map(jobName -> new NamespacedName(jobName, namespace))
                                    .collect(Collectors.toList()));

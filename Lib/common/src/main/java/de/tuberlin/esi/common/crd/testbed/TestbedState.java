@@ -1,8 +1,8 @@
-package de.tuberlin.esi.common.crd.slots;
+package de.tuberlin.esi.common.crd.testbed;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum SlotsStatusState {
+public enum TestbedState {
     IN_PROGRESS("IN_PROGRESS"),
     SUCCESS("SUCCESS"),
     ERROR("ERROR"),
@@ -12,7 +12,7 @@ public enum SlotsStatusState {
     private final String statusString;
 
 
-    SlotsStatusState(String statusString) {
+    TestbedState(String statusString) {
         this.statusString = statusString;
     }
 

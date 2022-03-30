@@ -14,5 +14,5 @@ public class SchedulingSpec {
     @Nullable
     private SlotScheduling slotBased;
 
-    private NamespacedName slots;
+    private NamespacedName testbed;
 }

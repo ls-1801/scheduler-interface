@@ -1,4 +1,4 @@
-package de.tuberlin.esi.common.crd.slots;
+package de.tuberlin.esi.common.crd.testbed;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

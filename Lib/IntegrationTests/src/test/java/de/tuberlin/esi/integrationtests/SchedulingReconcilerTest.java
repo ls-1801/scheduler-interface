@@ -2,8 +2,8 @@ package de.tuberlin.esi.integrationtests;
 
 import de.tuberlin.esi.batchjobreconciler.reconciler.BatchJobReconciler;
 import de.tuberlin.esi.common.crd.scheduling.SchedulingState;
-import de.tuberlin.esi.common.crd.slots.SlotIDsAnnotationString;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.SlotIDsAnnotationString;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
 import de.tuberlin.esi.schedulingreconciler.SchedulingReconciler;
 import de.tuberlin.esi.testbedreconciler.extender.ExtenderController;
 import de.tuberlin.esi.testbedreconciler.reconciler.TestbedReconciler;
@@ -82,9 +82,9 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
 
     @Override
     protected void registerCRDs() {
-        createCRDFromResource("batchjobs.batchjob.gcr.io-v1.yml");
-        createCRDFromResource("slots.batchjob.gcr.io-v1.yml");
-        createCRDFromResource("schedulings.batchjob.gcr.io-v1.yml");
+        createCRDFromResource("batchjobs.esi.tu-berlin.de-v1.yml");
+        createCRDFromResource("slots.esi.tu-berlin.de-v1.yml");
+        createCRDFromResource("schedulings.esi.tu-berlin.de-v1.yml");
         createCRDFromResource("flinkclusters.flinkoperator.k8s.io-v1.yml");
         createCRDFromResource("sparkapplications.sparkoperator.k8s.io-v1.yml");
 
@@ -283,7 +283,7 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
             assertThat(testBed.getStatus()).isNotNull();
             assertThat(testBed.getStatus().getNodeProblems()).isNull();
             assertThat(testBed.getStatus().getProblems()).isNullOrEmpty();
-            assertThat(testBed.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(testBed.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(testBed.getStatus().getSlots()).hasSize(4);
         });
 
@@ -329,7 +329,7 @@ public class SchedulingReconcilerTest extends BaseReconcilerTest {
             assertThat(testBed.getStatus()).isNotNull();
             assertThat(testBed.getStatus().getNodeProblems()).isNull();
             assertThat(testBed.getStatus().getProblems()).isNullOrEmpty();
-            assertThat(testBed.getStatus().getState()).isEqualTo(SlotsStatusState.SUCCESS);
+            assertThat(testBed.getStatus().getState()).isEqualTo(TestbedState.SUCCESS);
             assertThat(testBed.getStatus().getSlots()).hasSize(2);
         });
 

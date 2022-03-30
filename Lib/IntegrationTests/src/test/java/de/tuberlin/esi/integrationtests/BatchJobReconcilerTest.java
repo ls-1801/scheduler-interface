@@ -5,7 +5,7 @@ import de.tuberlin.esi.common.crd.NamespacedName;
 import de.tuberlin.esi.common.crd.batchjob.BatchJob;
 import de.tuberlin.esi.common.crd.batchjob.BatchJobState;
 import de.tuberlin.esi.common.crd.batchjob.CreationRequest;
-import de.tuberlin.esi.common.crd.slots.SlotIDsAnnotationString;
+import de.tuberlin.esi.common.crd.testbed.SlotIDsAnnotationString;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
@@ -333,7 +333,7 @@ class BatchJobReconcilerTest extends BaseReconcilerTest {
 
     @Override
     protected void registerCRDs() {
-        createCRDFromResource("batchjobs.batchjob.gcr.io-v1.yml");
+        createCRDFromResource("batchjobs.esi.tu-berlin.de-v1.yml");
         createCRDFromResource("flinkclusters.flinkoperator.k8s.io-v1.yml");
         createCRDFromResource("sparkapplications.sparkoperator.k8s.io-v1.yml");
     }

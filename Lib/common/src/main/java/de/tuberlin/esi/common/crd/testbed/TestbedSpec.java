@@ -1,4 +1,4 @@
-package de.tuberlin.esi.common.crd.slots;
+package de.tuberlin.esi.common.crd.testbed;
 
 
 import io.fabric8.kubernetes.api.model.Quantity;
@@ -11,7 +11,7 @@ import java.util.Map;
 @Value
 @Builder(toBuilder = true)
 @Jacksonized
-public class SlotSpec {
+public class TestbedSpec {
     int slotsPerNode;
     String nodeLabel;
     Map<String, Quantity> resourcesPerSlot;

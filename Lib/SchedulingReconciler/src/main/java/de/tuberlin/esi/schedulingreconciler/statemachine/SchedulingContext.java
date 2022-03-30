@@ -6,9 +6,9 @@ import de.tuberlin.esi.common.crd.batchjob.BatchJobState;
 import de.tuberlin.esi.common.crd.batchjob.CreationRequest;
 import de.tuberlin.esi.common.crd.scheduling.Scheduling;
 import de.tuberlin.esi.common.crd.scheduling.SchedulingJobState;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotOccupationStatus;
-import de.tuberlin.esi.common.crd.slots.SlotState;
+import de.tuberlin.esi.common.crd.testbed.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.SlotState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import de.tuberlin.esi.common.statemachine.StateMachineContext;
 import de.tuberlin.esi.schedulingreconciler.strategy.QueueBasedStrategy;
 import de.tuberlin.esi.schedulingreconciler.strategy.SchedulingStrategy;
@@ -52,7 +52,7 @@ public class SchedulingContext implements StateMachineContext {
     private final Set<NamespacedName> jobsSubmittedDuringCurrentCycle = new LinkedHashSet<>();
     private final HashMap<NamespacedName, BatchJob> jobCache = new HashMap<>();
     private SchedulingStrategy strategy;
-    private Slot slot;
+    private Testbed testbed;
 
     @Nullable
     public BatchJob getJob(NamespacedName jobName) {
@@ -88,22 +88,22 @@ public class SchedulingContext implements StateMachineContext {
         return freeSlots;
     }
 
-    public Slot getTestbed() {
+    public Testbed getTestbed() {
         return getTestbed(false);
     }
 
-    public Slot getTestbed(boolean forceUpdate) {
-        if (slot == null || forceUpdate) {
-            this.slot =
+    public Testbed getTestbed(boolean forceUpdate) {
+        if (testbed == null || forceUpdate) {
+            this.testbed =
                     getNullSafe(() ->
-                            client.resources(Slot.class)
-                                  .inNamespace(resource.getSpec().getSlots().getNamespace())
-                                  .withName(resource.getSpec().getSlots().getName())
+                            client.resources(Testbed.class)
+                                  .inNamespace(resource.getSpec().getTestbed().getNamespace())
+                                  .withName(resource.getSpec().getTestbed().getName())
                                   .get()
                     ).orElse(null);
         }
 
-        return slot;
+        return testbed;
     }
 
     public SchedulingStrategy getStrategy() {
@@ -142,18 +142,21 @@ public class SchedulingContext implements StateMachineContext {
     public void acquireSlot(NamespacedName testedName) {
         log.info("Acquire Testbed {}", testedName);
         var schedulingName = NamespacedName.of(resource);
-        this.slot = client.resources(Slot.class).inNamespace(testedName.getNamespace()).withName(testedName.getName())
-                          .edit((editSlots) -> {
-                              if (editSlots.getMetadata().getLabels() == null) {
-                                  editSlots.getMetadata().setLabels(new HashMap<>());
-                              }
+        this.testbed = client.resources(Testbed.class).inNamespace(testedName.getNamespace())
+                             .withName(testedName.getName())
+                             .edit((editSlots) -> {
+                                 if (editSlots.getMetadata().getLabels() == null) {
+                                     editSlots.getMetadata().setLabels(new HashMap<>());
+                                 }
 
-                              if (editSlots.getMetadata().getLabels().containsKey(ACTIVE_SCHEDULING_LABEL_NAME) &&
-                                      editSlots.getMetadata().getLabels().containsKey(ACTIVE_SCHEDULING_LABEL_NAMESPACE)
-                              ) {
-                                  var activeScheduling = new NamespacedName(
-                                          editSlots.getMetadata().getLabels().getOrDefault(ACTIVE_SCHEDULING_LABEL_NAME,
-                                                  ""),
+                                 if (editSlots.getMetadata().getLabels().containsKey(ACTIVE_SCHEDULING_LABEL_NAME) &&
+                                         editSlots.getMetadata().getLabels()
+                                                  .containsKey(ACTIVE_SCHEDULING_LABEL_NAMESPACE)
+                                 ) {
+                                     var activeScheduling = new NamespacedName(
+                                             editSlots.getMetadata().getLabels()
+                                                      .getOrDefault(ACTIVE_SCHEDULING_LABEL_NAME,
+                                                              ""),
                                           editSlots.getMetadata().getLabels()
                                                    .getOrDefault(ACTIVE_SCHEDULING_LABEL_NAMESPACE, "")
                                   );
@@ -182,7 +185,7 @@ public class SchedulingContext implements StateMachineContext {
                       throw new JobClaimedByAnotherSchedulingException(name, activeScheduling);
                   }
 
-                  var request = new CreationRequest(slotsUsed, NamespacedName.of(slot), slotsUsed.size());
+                  var request = new CreationRequest(slotsUsed, NamespacedName.of(testbed), slotsUsed.size());
                   var currentRequest = job.getSpec().getCreationRequest();
                   if (currentRequest != null && !request.equals(currentRequest)) {
                       throw new JobClaimedByAnotherSchedulingException(name, activeScheduling);
@@ -277,7 +280,7 @@ public class SchedulingContext implements StateMachineContext {
     }
 
     public void releaseTestbedIfClaimed(NamespacedName name) {
-        client.resources(Slot.class).inNamespace(name.getNamespace()).withName(name.getName())
+        client.resources(Testbed.class).inNamespace(name.getNamespace()).withName(name.getName())
               .edit(editTestbed -> {
                   if (editTestbed.getMetadata().getLabels() == null ||
                           !editTestbed.getMetadata().getLabels().getOrDefault(ACTIVE_SCHEDULING_LABEL_NAME, "")

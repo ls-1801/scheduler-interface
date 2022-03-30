@@ -3,7 +3,7 @@ package de.tuberlin.esi.integrationtests;
 import de.tuberlin.esi.common.crd.batchjob.BatchJobState;
 import de.tuberlin.esi.common.crd.scheduling.Scheduling;
 import de.tuberlin.esi.common.crd.scheduling.SchedulingState;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
 import de.tuberlin.esi.schedulingreconciler.SchedulingReconciler;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
@@ -22,9 +22,9 @@ public class SchedulingIntegrationTest extends BaseReconcilerTest {
 
     @Override
     protected void registerCRDs() {
-        createCRDFromResource("batchjobs.batchjob.gcr.io-v1.yml");
-        createCRDFromResource("slots.batchjob.gcr.io-v1.yml");
-        createCRDFromResource("schedulings.batchjob.gcr.io-v1.yml");
+        createCRDFromResource("batchjobs.esi.tu-berlin.de-v1.yml");
+        createCRDFromResource("slots.esi.tu-berlin.de-v1.yml");
+        createCRDFromResource("schedulings.esi.tu-berlin.de-v1.yml");
         createCRDFromResource("flinkclusters.flinkoperator.k8s.io-v1.yml");
     }
 
@@ -68,17 +68,17 @@ public class SchedulingIntegrationTest extends BaseReconcilerTest {
 
         changeBatchJobState(job1, BatchJobState.SubmittedState);
         changeBatchJobState(job1, BatchJobState.ScheduledState);
-        updateSlots(Set.of(), Set.of(1, 3), SlotsStatusState.RUNNING);
+        updateSlots(Set.of(), Set.of(1, 3), TestbedState.RUNNING);
         changeBatchJobState(job2, BatchJobState.SubmittedState);
-        updateSlots(Set.of(1, 3), Set.of(0, 2), SlotsStatusState.RUNNING);
+        updateSlots(Set.of(1, 3), Set.of(0, 2), TestbedState.RUNNING);
         changeBatchJobState(job2, BatchJobState.ScheduledState);
-        updateSlots(Set.of(0, 1, 2, 3), Set.of(), SlotsStatusState.RUNNING);
+        updateSlots(Set.of(0, 1, 2, 3), Set.of(), TestbedState.RUNNING);
 
         changeBatchJobState(job1, BatchJobState.CompletedState);
-        updateSlots(Set.of(0, 2), Set.of(), SlotsStatusState.RUNNING);
+        updateSlots(Set.of(0, 2), Set.of(), TestbedState.RUNNING);
 
         changeBatchJobState(job2, BatchJobState.CompletedState);
-        updateSlots(Set.of(), Set.of(), SlotsStatusState.SUCCESS);
+        updateSlots(Set.of(), Set.of(), TestbedState.SUCCESS);
 
         assertSchedulingState(TEST_SCHEDULING, SchedulingState.CompletedState);
 
@@ -138,8 +138,8 @@ public class SchedulingIntegrationTest extends BaseReconcilerTest {
 
 
         changeBatchJobState(job1, BatchJobState.SubmittedState);
-        updateSlots(Set.of(), Set.of(0, 1, 2), SlotsStatusState.RUNNING);
-        updateSlots(Set.of(0, 1, 2), Set.of(), SlotsStatusState.RUNNING);
+        updateSlots(Set.of(), Set.of(0, 1, 2), TestbedState.RUNNING);
+        updateSlots(Set.of(0, 1, 2), Set.of(), TestbedState.RUNNING);
         changeBatchJobState(job1, BatchJobState.ScheduledState);
 
         // Wait for slots to become available again
@@ -152,7 +152,7 @@ public class SchedulingIntegrationTest extends BaseReconcilerTest {
         assertSchedulingState(TEST_SCHEDULING, SchedulingState.SubmissionState);
         assertApplicationCreationWasNotRequested(job2);
 
-        updateSlots(Set.of(), Set.of(), SlotsStatusState.SUCCESS);
+        updateSlots(Set.of(), Set.of(), TestbedState.SUCCESS);
 
         // Job 2 is created
         assertApplicationCreationWasRequested(job2, "0_1_2", 3);
@@ -161,13 +161,13 @@ public class SchedulingIntegrationTest extends BaseReconcilerTest {
         assertSchedulingState(TEST_SCHEDULING, SchedulingState.AwaitingCompletionState);
 
         changeBatchJobState(job2, BatchJobState.SubmittedState);
-        updateSlots(Set.of(), Set.of(0, 1, 2), SlotsStatusState.RUNNING);
-        updateSlots(Set.of(0, 1, 2), Set.of(), SlotsStatusState.RUNNING);
+        updateSlots(Set.of(), Set.of(0, 1, 2), TestbedState.RUNNING);
+        updateSlots(Set.of(0, 1, 2), Set.of(), TestbedState.RUNNING);
         changeBatchJobState(job2, BatchJobState.ScheduledState);
         changeBatchJobState(job2, BatchJobState.RunningState);
         changeBatchJobState(job2, BatchJobState.CompletedState);
 
-        updateSlots(Set.of(), Set.of(), SlotsStatusState.SUCCESS);
+        updateSlots(Set.of(), Set.of(), TestbedState.SUCCESS);
 
         // All Jobs were completed
         assertSchedulingState(TEST_SCHEDULING, SchedulingState.CompletedState);

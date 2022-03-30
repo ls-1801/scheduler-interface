@@ -4,10 +4,10 @@ import com.google.common.collect.ImmutableList;
 import de.tuberlin.esi.batchjobreconciler.reconciler.flink.FlinkClusterBuilder;
 import de.tuberlin.esi.batchjobreconciler.reconciler.spark.SparkApplicationBuilder;
 import de.tuberlin.esi.common.crd.batchjob.BatchJob;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotIDsAnnotationString;
-import de.tuberlin.esi.common.crd.slots.SlotOccupationStatus;
-import de.tuberlin.esi.common.crd.slots.SlotState;
+import de.tuberlin.esi.common.crd.testbed.SlotIDsAnnotationString;
+import de.tuberlin.esi.common.crd.testbed.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.SlotState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.AffinityBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -24,19 +24,19 @@ import static de.tuberlin.esi.common.constants.SlotsConstants.SLOT_POD_LABEL_NAM
 public abstract class ApplicationBuilder {
 
     protected final BatchJob job;
-    protected final Slot slots;
+    protected final Testbed testbed;
     protected final List<SlotOccupationStatus> freeSlots;
     protected String namespace;
 
 
-    protected ApplicationBuilder(BatchJob job, Slot slots) {
-        this.slots = slots;
-        this.freeSlots = slots.getStatus().getSlots().stream()
-                              .filter(occ -> occ.getState() == SlotState.FREE).collect(Collectors.toList());
+    protected ApplicationBuilder(BatchJob job, Testbed testbed) {
+        this.testbed = testbed;
+        this.freeSlots = testbed.getStatus().getSlots().stream()
+                                .filter(occ -> occ.getState() == SlotState.FREE).collect(Collectors.toList());
         this.job = job;
     }
 
-    public static ApplicationBuilder forJob(BatchJob job, Slot slots) {
+    public static ApplicationBuilder forJob(BatchJob job, Testbed slots) {
         if (job.isSpark()) {
             return new SparkApplicationBuilder(job, slots);
         }
@@ -59,7 +59,7 @@ public abstract class ApplicationBuilder {
 
     protected Map<String, String> createLabels() {
         return Map.of(
-                SLOT_POD_LABEL_NAME, slots.getMetadata().getName(),
+                SLOT_POD_LABEL_NAME, testbed.getMetadata().getName(),
                 SLOT_POD_IS_GHOSTPOD_NAME, "false",
                 SLOT_IDS_NAME, SlotIDsAnnotationString.of(freeSlots).toString()
         );
@@ -71,7 +71,7 @@ public abstract class ApplicationBuilder {
         return new AffinityBuilder()
                 .withNewNodeAffinity().withNewRequiredDuringSchedulingIgnoredDuringExecution()
                 .addNewNodeSelectorTerm().addNewMatchExpression()
-                .withKey(slots.getSpec().getNodeLabel())
+                .withKey(testbed.getSpec().getNodeLabel())
                 .withValues(ImmutableList.copyOf(freeSlots.stream()
                                                           .map(freeSlot -> String.valueOf(freeSlot.getNodeId()))
                                                           .collect(Collectors.toSet())))

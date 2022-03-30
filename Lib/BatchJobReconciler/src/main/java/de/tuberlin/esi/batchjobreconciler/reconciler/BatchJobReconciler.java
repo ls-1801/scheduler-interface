@@ -87,7 +87,7 @@ public class BatchJobReconciler implements Reconciler<BatchJob>, EventSourceInit
         context.createApplication(creationRequestCondition.getCreationRequest());
 
         var status = context.getResource().getStatus();
-        status.setSlots(creationRequest.getSlotsName());
+        status.setSlots(creationRequest.getTestbedName());
         status.setSlotIds(creationRequest.getSlotIds());
         status.setReplication(creationRequest.getReplication());
     }

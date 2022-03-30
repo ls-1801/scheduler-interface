@@ -3,7 +3,7 @@
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>BatchJobOperator</artifactId>
+        <artifactId>ExternalSchedulerInterface</artifactId>
         <groupId>de.tuberlin</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
@@ -46,9 +46,9 @@
                                         <resource>
                                             <directory>../Lib/common/target/classes/META-INF/fabric8</directory>
                                             <includes>
-                                                <include>batchjobs.batchjob.gcr.io-v1.yml</include>
-                                                <include>schedulings.batchjob.gcr.io-v1.yml</include>
-                                                <include>slots.batchjob.gcr.io-v1.yml</include>
+                                                <include>batchjobs.esi.tu-berlin.de-v1.yml</include>
+                                                <include>schedulings.esi.tu-berlin.de-v1.yml</include>
+                                                <include>testbeds.esi.tu-berlin.de-v1.yml</include>
                                             </includes>
                                         </resource>
                                     </resources>

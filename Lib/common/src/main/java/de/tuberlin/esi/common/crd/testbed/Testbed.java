@@ -1,4 +1,4 @@
-package de.tuberlin.esi.common.crd.slots;
+package de.tuberlin.esi.common.crd.testbed;
 
 import io.fabric8.kubernetes.api.model.Namespaced;
 import io.fabric8.kubernetes.client.CustomResource;
@@ -6,17 +6,17 @@ import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.ShortNames;
 import io.fabric8.kubernetes.model.annotation.Version;
 
-@Group("batchjob.gcr.io")
+@Group("esi.tu-berlin.de")
 @Version("v1alpha1")
-@ShortNames("slot")
-public class Slot extends CustomResource<SlotSpec, SlotStatus> implements Namespaced {
+@ShortNames("tb")
+public class Testbed extends CustomResource<TestbedSpec, TestbedStatus> implements Namespaced {
 
     @Override
-    protected SlotStatus initStatus() {
-        return new SlotStatus();
+    protected TestbedStatus initStatus() {
+        return new TestbedStatus();
     }
 
-    public SlotStatus defaultStatus() {
+    public TestbedStatus defaultStatus() {
         return initStatus();
     }
 }

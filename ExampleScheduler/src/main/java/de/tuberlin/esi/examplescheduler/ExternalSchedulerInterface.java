@@ -1,7 +1,7 @@
 package de.tuberlin.esi.examplescheduler;
 
 import de.tuberlin.esi.common.crd.scheduling.SchedulingState;
-import de.tuberlin.esi.common.crd.slots.SlotsStatusState;
+import de.tuberlin.esi.common.crd.testbed.TestbedState;
 import de.tuberlin.esi.schedulingreconciler.external.ExternalBatchJob;
 import de.tuberlin.esi.schedulingreconciler.external.ExternalResourceModification;
 import de.tuberlin.esi.schedulingreconciler.external.ExternalScheduling;
@@ -152,7 +152,7 @@ public class ExternalSchedulerInterface {
                 }
 
                 if (payload.getAction() == Watcher.Action.MODIFIED &&
-                        payload.getResource().getState() == SlotsStatusState.SUCCESS) {
+                        payload.getResource().getState() == TestbedState.SUCCESS) {
                     log.info("Testbed {} is ready", name);
                     return true;
                 }
@@ -161,7 +161,7 @@ public class ExternalSchedulerInterface {
 
             @Override
             protected Mono<Boolean> initial() {
-                return getTestbed(name).map(testbed -> testbed.getState() == SlotsStatusState.SUCCESS);
+                return getTestbed(name).map(testbed -> testbed.getState() == TestbedState.SUCCESS);
             }
         }.toMono().block();
 

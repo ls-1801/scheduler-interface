@@ -50,7 +50,7 @@ public class SchedulingJobConditionDeserializer extends StdDeserializer<Abstract
         setFieldIfExist(node, "value", JsonNode::asBoolean, obj::setValue);
         setFieldIfExist(node, "slotIds", this::slotIds, obj::setSlotIds);
         setFieldIfExist(node, "numberOfSlotsRequired", JsonNode::asInt, obj::setNumberOfSlotsRequired);
-        setFieldIfExist(node, "slotsName", this::namespacedName, obj::setSlotsName);
+        setFieldIfExist(node, "testbedName", this::namespacedName, obj::setTestbedName);
         setFieldIfExist(node, "jobName", this::namespacedName, obj::setJobName);
         setFieldIfExist(node, "jobs", this::jobs, obj::setJobs);
 

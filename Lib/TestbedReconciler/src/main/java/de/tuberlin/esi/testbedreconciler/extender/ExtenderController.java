@@ -1,10 +1,10 @@
 package de.tuberlin.esi.testbedreconciler.extender;
 
 import com.google.common.primitives.Ints;
-import de.tuberlin.esi.common.crd.slots.Slot;
-import de.tuberlin.esi.common.crd.slots.SlotIDsAnnotationString;
-import de.tuberlin.esi.common.crd.slots.SlotOccupationStatus;
-import de.tuberlin.esi.common.crd.slots.SlotState;
+import de.tuberlin.esi.common.crd.testbed.SlotIDsAnnotationString;
+import de.tuberlin.esi.common.crd.testbed.SlotOccupationStatus;
+import de.tuberlin.esi.common.crd.testbed.SlotState;
+import de.tuberlin.esi.common.crd.testbed.Testbed;
 import de.tuberlin.esi.testbedreconciler.problems.NoFreeSlotsException;
 import de.tuberlin.esi.testbedreconciler.problems.PreemptionNotApplicableException;
 import de.tuberlin.esi.testbedreconciler.reconciler.ApplicationPodView;
@@ -48,7 +48,7 @@ public class ExtenderController {
     public static final Integer EXTENDER_RETRY_COUNTER_BEFORE_DELETION = 3;
     private final KubernetesClient client;
 
-    private Optional<SlotOccupationStatus> findSlotById(Slot slots, int position) {
+    private Optional<SlotOccupationStatus> findSlotById(Testbed slots, int position) {
         if (slots.getStatus().getSlots() == null) {
             throw new RuntimeException("Slots are not ready");
         }
@@ -56,7 +56,7 @@ public class ExtenderController {
         return slots.getStatus().getSlots().stream().filter(slot -> position == slot.getPosition()).findFirst();
     }
 
-    private void debugLogSlots(Slot slots) {
+    private void debugLogSlots(Testbed slots) {
         log.debug("name:         {}", getName(slots));
         log.debug("namespace     {}", getNamespace(slots));
         log.debug("state:        {}", slots.getStatus().getState());
@@ -71,8 +71,8 @@ public class ExtenderController {
     }
 
     @Nullable
-    private Slot getSlotsForPod(Pod pod) {
-        return client.resources(Slot.class)
+    private Testbed getSlotsForPod(Pod pod) {
+        return client.resources(Testbed.class)
                      .inNamespace(getNamespace(pod))
                      .withName(ApplicationPodView.wrap(pod).getLabel(SLOT_POD_LABEL_NAME)
                                                  .orElseThrow(() -> new RuntimeException("Not " +
@@ -263,7 +263,7 @@ public class ExtenderController {
     }
 
     @Nonnull
-    private Slot verifyTestbedAreReady(@Nullable Slot slots) {
+    private Testbed verifyTestbedAreReady(@Nullable Testbed slots) {
         if (slots == null) {
             throw new RuntimeException("Testbed do not exist");
         }
@@ -298,13 +298,13 @@ public class ExtenderController {
               });
     }
 
-    public void reserveSlot(Slot slots, SlotOccupationStatus slot, Pod pod) {
+    public void reserveSlot(Testbed slots, SlotOccupationStatus slot, Pod pod) {
         if (!slots.getStatus().getSlots().contains(slot)) {
             throw new RuntimeException("Trying to reserve slot, that is not part of the StatusReporter");
         }
         var view = ApplicationPodView.wrap(pod);
 
-        client.resources(Slot.class).inNamespace(getNamespace(slots)).withName(getName(slots))
+        client.resources(Testbed.class).inNamespace(getNamespace(slots)).withName(getName(slots))
               .editStatus((editSlots) -> {
                   var slotToBeReserved = editSlots.getStatus().getSlots().stream()
                                                   .filter(editSlot -> editSlot.getPosition() == slot.getPosition())
