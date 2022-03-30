@@ -13,6 +13,8 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,33 +28,51 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 public class DebugController {
 
     private final KubernetesClient client;
     private final ObjectMapper mapper;
     private final String namespace;
 
+    @SneakyThrows
     @GetMapping(value = "/debug/reset-all-jobs")
-    public List<String> resetAllJobs(@RequestParam("allNamespaces") boolean allNamespaces) {
+    public List<String> resetAllJobs(@RequestParam(value = "allNamespaces", defaultValue = "false") boolean allNamespaces) {
         var namespacedClient = allNamespaces ? client.resources(BatchJob.class) :
                 client.resources(BatchJob.class).inNamespace(namespace);
 
-        return namespacedClient.list().getItems().stream()
-                               .filter(job -> job.getStatus().getState() == BatchJobState.FailedState)
-                               .map(job -> {
-                                   namespacedClient.delete(job);
-                                   var newJob = new BatchJob();
-                                   newJob.setSpec(job.getSpec());
-                                   newJob.setMetadata(new ObjectMetaBuilder()
-                                           .withName(job.getMetadata().getName())
-                                           .withNamespace(job.getMetadata().getNamespace())
-                                           .build()
-                                   );
-                                   namespacedClient.create(newJob);
+        var jobs = namespacedClient.list().getItems().stream()
+                                   .filter(job -> job.getStatus().getState() == BatchJobState.FailedState)
+                                   .map(job -> {
+                                       namespacedClient.delete(job);
 
-                                   return newJob.getMetadata().getName();
-                               })
-                               .collect(Collectors.toList());
+                                       var newJob = new BatchJob();
+                                       newJob.setSpec(job.getSpec());
+                                       newJob.setMetadata(new ObjectMetaBuilder()
+                                               .withName(job.getMetadata().getName())
+                                               .withNamespace(job.getMetadata().getNamespace())
+                                               .build()
+                                       );
+                                       return newJob;
+                                   })
+                                   .collect(Collectors.toList());
+
+        Thread.sleep(3000);
+
+        jobs.forEach(job -> {
+            for (int i = 0; i < 3; i++) {
+                try {
+                    namespacedClient.create(job);
+                    return;
+                } catch (Exception e) {
+                    log.error("When recreating job: {}", job, e);
+                }
+            }
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Could not recreated job " + job.getMetadata().getName());
+        });
+
+        return jobs.stream().map(job -> job.getMetadata().getName()).collect(Collectors.toList());
 
 
     }
